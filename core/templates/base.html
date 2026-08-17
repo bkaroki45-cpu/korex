@@ -1,0 +1,158 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>{% block title %}KOREX{% endblock %}</title>
+
+    <link
+        rel="stylesheet"
+        href="{% static 'css/base.css' %}"
+    >
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+    <div class="app-shell">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+
+            <div class="brand">
+                <div class="brand-logo">
+                    K
+                </div>
+
+                <div class="brand-name">
+                    KOREX
+                </div>
+            </div>
+
+
+            <nav class="sidebar-nav">
+
+                <a href="#" class="nav-item active">
+                    <span class="nav-icon">⌂</span>
+                    <span>Dashboard</span>
+                </a>
+
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">◈</span>
+                    <span>Daily Sessions</span>
+                </a>
+
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">▣</span>
+                    <span>Investments</span>
+                </a>
+
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">◉</span>
+                    <span>Wallet</span>
+                </a>
+
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">↔</span>
+                    <span>Transactions</span>
+                </a>
+
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">♧</span>
+                    <span>Team</span>
+                </a>
+
+            </nav>
+
+
+            <div class="sidebar-bottom">
+
+                <a href="#" class="nav-item">
+                    <span class="nav-icon">⚙</span>
+                    <span>Settings</span>
+                </a>
+
+                <a href="#" class="nav-item logout">
+                    <span class="nav-icon">↪</span>
+                    <span>Logout</span>
+                </a>
+
+            </div>
+
+        </aside>
+
+
+        <!-- MAIN -->
+        <main class="main-content">
+
+            <!-- TOPBAR -->
+            <header class="topbar">
+
+                <button
+                    class="menu-button"
+                    onclick="toggleSidebar()"
+                >
+                    ☰
+                </button>
+
+
+                <div class="page-title">
+                    {% block page_title %}
+                    Dashboard
+                    {% endblock %}
+                </div>
+
+
+                <div class="topbar-right">
+
+                    <button class="notification-button">
+                        🔔
+                        <span class="notification-dot"></span>
+                    </button>
+
+
+                    <div class="user-mini">
+
+                        <div class="user-avatar">
+                            U
+                        </div>
+
+                        <div class="user-info">
+                            <strong>User</strong>
+                            <small>Member</small>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </header>
+
+
+            <!-- PAGE CONTENT -->
+            <section class="page-content">
+
+                {% block content %}
+                {% endblock %}
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <script src="{% static 'js/base.js' %}"></script>
+
+    {% block extra_js %}{% endblock %}
+
+</body>
+</html>

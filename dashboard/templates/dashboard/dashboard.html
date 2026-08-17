@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+KOREX — Dashboard
+{% endblock %}
+
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="{% static 'css/dashboard.css' %}"
+>
+{% endblock %}
+
+{% block content %}
+
+<div class="dashboard-header">
+
+    <div>
+        <h1>Welcome back 👋</h1>
+
+        <p>
+            Manage your account and daily earning sessions.
+        </p>
+    </div>
+
+</div>
+
+
+<!-- BALANCE CARDS -->
+
+<div class="balance-grid">
+
+    <div class="balance-card main-balance">
+
+        <div class="card-label">
+            Total Balance
+        </div>
+
+        <div class="balance-value">
+            $0.00
+        </div>
+
+        <div class="balance-footer">
+            <span>Available + Locked</span>
+        </div>
+
+    </div>
+
+
+    <div class="balance-card">
+
+        <div class="card-label">
+            Available Balance
+        </div>
+
+        <div class="balance-value">
+            $0.00
+        </div>
+
+        <div class="balance-footer positive">
+            Ready to withdraw
+        </div>
+
+    </div>
+
+
+    <div class="balance-card">
+
+        <div class="card-label">
+            Total Profit
+        </div>
+
+        <div class="balance-value">
+            $0.00
+        </div>
+
+        <div class="balance-footer positive">
+            +0.00%
+        </div>
+
+    </div>
+
+
+    <div class="balance-card">
+
+        <div class="card-label">
+            Locked Funds
+        </div>
+
+        <div class="balance-value">
+            $0.00
+        </div>
+
+        <div class="balance-footer">
+            Active investment
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ACTIONS -->
+
+<div class="quick-actions">
+
+    <button class="action-button primary">
+        + Deposit
+    </button>
+
+    <button class="action-button">
+        Withdraw
+    </button>
+
+    <button class="action-button">
+        View Sessions
+    </button>
+
+</div>
+
+
+<!-- CONTENT GRID -->
+
+<div class="dashboard-grid">
+
+
+    <!-- ACTIVE INVESTMENT -->
+
+    <div class="dashboard-panel">
+
+        <div class="panel-header">
+
+            <div>
+                <h2>Active Investment</h2>
+
+                <span>
+                    Your current investment
+                </span>
+            </div>
+
+            <span class="status-badge">
+                Active
+            </span>
+
+        </div>
+
+
+        <div class="investment-empty">
+
+            <div class="empty-icon">
+                ◈
+            </div>
+
+            <h3>No active investment</h3>
+
+            <p>
+                Your active investment will appear here.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- DAILY SESSIONS -->
+
+    <div class="dashboard-panel">
+
+        <div class="panel-header">
+
+            <div>
+                <h2>Today's Sessions</h2>
+
+                <span>
+                    0 of 3 completed
+                </span>
+            </div>
+
+            <a href="#">
+                View all
+            </a>
+
+        </div>
+
+
+        <div class="session-preview">
+
+            <div class="session-row">
+
+                <div class="session-asset">
+                    <div class="asset-icon">₿</div>
+
+                    <div>
+                        <strong>BTC / USDT</strong>
+                        <small>Session 1</small>
+                    </div>
+                </div>
+
+                <span class="session-status">
+                    Available
+                </span>
+
+            </div>
+
+
+            <div class="session-row">
+
+                <div class="session-asset">
+                    <div class="asset-icon">Ξ</div>
+
+                    <div>
+                        <strong>ETH / USDT</strong>
+                        <small>Session 2</small>
+                    </div>
+                </div>
+
+                <span class="session-status">
+                    Available
+                </span>
+
+            </div>
+
+
+            <div class="session-row">
+
+                <div class="session-asset">
+                    <div class="asset-icon">S</div>
+
+                    <div>
+                        <strong>SOL / USDT</strong>
+                        <small>Session 3</small>
+                    </div>
+                </div>
+
+                <span class="session-status">
+                    Available
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- TRANSACTIONS -->
+
+<div class="dashboard-panel transactions-panel">
+
+    <div class="panel-header">
+
+        <div>
+            <h2>Recent Transactions</h2>
+
+            <span>
+                Your latest account activity
+            </span>
+        </div>
+
+        <a href="#">
+            View all
+        </a>
+
+    </div>
+
+
+    <div class="empty-transactions">
+
+        <div class="empty-icon">
+            ↔
+        </div>
+
+        <h3>No transactions yet</h3>
+
+        <p>
+            Your deposits, earnings and withdrawals
+            will appear here.
+        </p>
+
+    </div>
+
+</div>
+
+{% endblock %}

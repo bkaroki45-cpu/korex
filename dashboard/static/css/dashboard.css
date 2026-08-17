@@ -1,0 +1,339 @@
+.dashboard-header {
+    margin-bottom: 28px;
+}
+
+.dashboard-header h1 {
+    font-size: 27px;
+    margin-bottom: 7px;
+}
+
+.dashboard-header p {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+
+/* BALANCES */
+
+.balance-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 15px;
+
+    margin-bottom: 18px;
+}
+
+.balance-card {
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    border-radius: 15px;
+
+    padding: 21px;
+
+    min-height: 140px;
+}
+
+.main-balance {
+    border-color:
+        rgba(48, 182, 75, 0.3);
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(48, 182, 75, 0.12),
+            var(--panel)
+        );
+}
+
+.card-label {
+    color: var(--muted);
+
+    font-size: 13px;
+
+    margin-bottom: 13px;
+}
+
+.balance-value {
+    font-size: 25px;
+
+    font-weight: 750;
+
+    margin-bottom: 15px;
+}
+
+.balance-footer {
+    color: var(--muted);
+
+    font-size: 12px;
+}
+
+.balance-footer.positive {
+    color: var(--primary);
+}
+
+
+/* QUICK ACTIONS */
+
+.quick-actions {
+    display: flex;
+
+    gap: 10px;
+
+    margin-bottom: 25px;
+}
+
+.action-button {
+    padding: 11px 18px;
+
+    border-radius: 9px;
+
+    border: 1px solid var(--border);
+
+    background: var(--panel);
+
+    color: var(--text);
+
+    cursor: pointer;
+
+    font-size: 13px;
+}
+
+.action-button.primary {
+    background: var(--primary);
+
+    border-color: var(--primary);
+
+    color: white;
+}
+
+.action-button:hover {
+    opacity: 0.9;
+}
+
+
+/* PANELS */
+
+.dashboard-grid {
+    display: grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap: 18px;
+
+    margin-bottom: 18px;
+}
+
+.dashboard-panel {
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    border-radius: 15px;
+
+    padding: 22px;
+}
+
+.panel-header {
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    margin-bottom: 20px;
+}
+
+.panel-header h2 {
+    font-size: 16px;
+
+    margin-bottom: 5px;
+}
+
+.panel-header span {
+    color: var(--muted);
+
+    font-size: 12px;
+}
+
+.panel-header a {
+    color: var(--primary);
+
+    font-size: 12px;
+}
+
+
+/* EMPTY STATE */
+
+.investment-empty,
+.empty-transactions {
+    text-align: center;
+
+    padding: 35px 15px;
+}
+
+.empty-icon {
+    width: 45px;
+    height: 45px;
+
+    border-radius: 12px;
+
+    background: rgba(
+        255,
+        255,
+        255,
+        0.04
+    );
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    margin: 0 auto 13px;
+
+    color: var(--muted);
+
+    font-size: 20px;
+}
+
+.investment-empty h3,
+.empty-transactions h3 {
+    font-size: 14px;
+
+    margin-bottom: 7px;
+}
+
+.investment-empty p,
+.empty-transactions p {
+    color: var(--muted);
+
+    font-size: 12px;
+}
+
+
+/* SESSIONS */
+
+.session-preview {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 8px;
+}
+
+.session-row {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    padding: 12px;
+
+    border-radius: 10px;
+
+    background:
+        rgba(255, 255, 255, 0.025);
+}
+
+.session-asset {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+}
+
+.asset-icon {
+    width: 35px;
+    height: 35px;
+
+    border-radius: 9px;
+
+    background:
+        rgba(48, 182, 75, 0.1);
+
+    color: var(--primary);
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    font-weight: 700;
+}
+
+.session-asset strong {
+    display: block;
+
+    font-size: 13px;
+}
+
+.session-asset small {
+    display: block;
+
+    color: var(--muted);
+
+    font-size: 10px;
+
+    margin-top: 3px;
+}
+
+.session-status {
+    color: var(--primary) !important;
+
+    font-size: 11px !important;
+}
+
+
+/* TRANSACTIONS */
+
+.transactions-panel {
+    margin-bottom: 30px;
+}
+
+
+/* RESPONSIVE */
+
+@media (max-width: 1100px) {
+
+    .balance-grid {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+}
+
+@media (max-width: 750px) {
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+@media (max-width: 550px) {
+
+    .balance-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .quick-actions {
+        overflow-x: auto;
+    }
+
+    .action-button {
+        white-space: nowrap;
+    }
+
+    .dashboard-header h1 {
+        font-size: 22px;
+    }
+
+}
