@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+KOREX — Earning Sessions
+{% endblock %}
+
+{% block extra_css %}
+<link
+    rel="stylesheet"
+    href="{% static 'investments/css/earning_sessions.css' %}"
+>
+{% endblock %}
+
+{% block content %}
+
+<div class="sessions-page">
+
+    <div class="sessions-header">
+
+        <div>
+            <a
+                href="{% url 'investments' %}"
+                class="back-link"
+            >
+                ← Back to Investments
+            </a>
+
+            <h1>{{ investment.principal }} Investment</h1>
+
+            <p>
+                Today's earning sessions
+            </p>
+        </div>
+
+        <div class="investment-status">
+            {{ investment.get_status_display }}
+        </div>
+
+    </div>
+
+
+    <div class="investment-summary">
+
+        <div class="summary-card">
+            <span>Principal</span>
+            <strong>
+                ${{ investment.principal }}
+            </strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Current Value</span>
+            <strong>
+                ${{ investment.current_value }}
+            </strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Total Profit</span>
+            <strong>
+                ${{ investment.total_profit }}
+            </strong>
+        </div>
+
+        <div class="summary-card">
+            <span>Daily Rate</span>
+            <strong>
+                {{ investment.daily_rate }}%
+            </strong>
+        </div>
+
+    </div>
+
+
+    <div class="sessions-section">
+
+        <div class="section-heading">
+            <h2>Today's Sessions</h2>
+
+            <p>
+                Participate in each available session to earn.
+            </p>
+        </div>
+
+
+        <div class="sessions-list">
+
+            {% for session in sessions %}
+
+                <div class="session-card">
+
+                    <div class="session-number">
+                        Session {{ forloop.counter }}
+                    </div>
+
+                    <div class="session-info">
+
+                        <h3>
+                            {{ session.display_asset }}
+                        </h3>
+
+                        <span
+                            class="direction
+                            {% if session.display_direction == 'BUY' %}
+                                buy
+                            {% else %}
+                                sell
+                            {% endif %}"
+                        >
+                            {{ session.display_direction }}
+                        </span>
+
+                    </div>
+
+
+                    <div class="session-details">
+
+                        {% if session.display_entry_price %}
+                            <div>
+                                <span>Entry</span>
+                                <strong>
+                                    {{ session.display_entry_price }}
+                                </strong>
+                            </div>
+                        {% endif %}
+
+                        {% if session.display_take_profit %}
+                            <div>
+                                <span>Take Profit</span>
+                                <strong>
+                                    {{ session.display_take_profit }}
+                                </strong>
+                            </div>
+                        {% endif %}
+
+                        {% if session.display_stop_loss %}
+                            <div>
+                                <span>Stop Loss</span>
+                                <strong>
+                                    {{ session.display_stop_loss }}
+                                </strong>
+                            </div>
+                        {% endif %}
+
+                    </div>
+
+
+                    <div class="session-bottom">
+
+                        <div>
+                            <span>Earning</span>
+
+                            <strong>
+                                ${{ session.earning_amount }}
+                            </strong>
+                        </div>
+
+                        {% if session.status == "AVAILABLE" %}
+
+                            <button class="session-button">
+                                Participate
+                            </button>
+
+                        {% elif session.status == "PARTICIPATED" %}
+
+                            <span class="session-completed">
+                                ✓ Completed
+                            </span>
+
+                        {% else %}
+
+                            <span class="session-expired">
+                                Expired
+                            </span>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            {% empty %}
+
+                <div class="empty-sessions">
+
+                    <h3>No sessions available</h3>
+
+                    <p>
+                        Your earning sessions will appear here.
+                    </p>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+KOREX — Investments
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'investments/css/investments.css' %}">
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1>Investments</h1>
+        <p>Choose an investment plan and start earning daily.</p>
+    </div>
+
+    <a href="{% url 'dashboard' %}" class="back-button">
+        ← Back to Dashboard
+    </a>
+</div>
+
+
+<!-- ========================= -->
+<!-- INVESTMENT PLANS -->
+<!-- ========================= -->
+
+<div class="plans-section">
+
+    <div class="section-heading">
+        <h2>Choose an Investment Plan</h2>
+        <p>Select an investment plan to get started.</p>
+    </div>
+
+
+    <div class="plans-grid">
+
+
+        <!-- STARTER PLAN -->
+        <div class="investment-plan">
+
+            <div class="plan-top">
+                <span class="plan-name">Starter</span>
+                <span class="plan-badge">Beginner</span>
+            </div>
+
+            <div class="plan-price">
+                <span>Minimum Investment</span>
+                <strong>$10</strong>
+            </div>
+
+            <ul class="plan-features">
+                <li>✓ Daily earning sessions</li>
+                <li>✓ 3 sessions per day</li>
+                <li>✓ Track your earnings</li>
+                <li>✓ Withdraw available balance</li>
+            </ul>
+
+            <a
+                href="{% url 'create_investment' 'starter' %}"
+                class="plan-button"
+            >
+                Start Investment
+            </a>
+
+        </div>
+
+
+        <!-- GROWTH PLAN -->
+        <div class="investment-plan featured">
+
+            <div class="popular-label">
+                MOST POPULAR
+            </div>
+
+            <div class="plan-top">
+                <span class="plan-name">Growth</span>
+                <span class="plan-badge">Recommended</span>
+            </div>
+
+            <div class="plan-price">
+                <span>Minimum Investment</span>
+                <strong>$50</strong>
+            </div>
+
+            <ul class="plan-features">
+                <li>✓ Daily earning sessions</li>
+                <li>✓ 3 sessions per day</li>
+                <li>✓ Priority sessions</li>
+                <li>✓ Enhanced earning potential</li>
+            </ul>
+
+            <a
+                href="{% url 'create_investment' 'growth' %}"
+                class="plan-button primary"
+            >
+                Start Investment
+            </a>
+
+        </div>
+
+
+        <!-- PREMIUM PLAN -->
+        <div class="investment-plan">
+
+            <div class="plan-top">
+                <span class="plan-name">Premium</span>
+                <span class="plan-badge">Advanced</span>
+            </div>
+
+            <div class="plan-price">
+                <span>Minimum Investment</span>
+                <strong>$100</strong>
+            </div>
+
+            <ul class="plan-features">
+                <li>✓ Daily earning sessions</li>
+                <li>✓ 3 sessions per day</li>
+                <li>✓ Premium opportunities</li>
+                <li>✓ Advanced account insights</li>
+            </ul>
+
+            <a
+                href="{% url 'create_investment' 'premium' %}"
+                class="plan-button"
+            >
+                Start Investment
+            </a>
+
+        </div>
+
+
+    </div>
+
+</div>
+
+
+<!-- ========================= -->
+<!-- MY INVESTMENTS -->
+<!-- ========================= -->
+
+<div class="my-investments-section">
+
+    <div class="section-heading">
+        <h2>My Investments</h2>
+        <p>Track your active and completed investments.</p>
+    </div>
+
+
+    {% if investments %}
+
+        <div class="investments-list">
+
+            {% for investment in investments %}
+
+                <div class="investment-card">
+
+                    <!-- CARD HEADER -->
+                    <div class="investment-card-header">
+
+                        <div>
+                            <span class="investment-label">
+                                Investment #{{ investment.id }}
+                            </span>
+
+                            <h3>
+                                ${{ investment.principal|floatformat:2 }}
+                            </h3>
+                        </div>
+
+                        <span class="investment-status {{ investment.status|lower }}">
+                            {{ investment.get_status_display }}
+                        </span>
+
+                    </div>
+
+
+                    <!-- INVESTMENT DETAILS -->
+                    <div class="investment-details">
+
+                        <div class="investment-detail">
+                            <span>Principal</span>
+
+                            <strong>
+                                ${{ investment.principal|floatformat:2 }}
+                            </strong>
+                        </div>
+
+
+                        <div class="investment-detail">
+                            <span>Current Value</span>
+
+                            <strong>
+                                ${{ investment.current_value|floatformat:2 }}
+                            </strong>
+                        </div>
+
+
+                        <div class="investment-detail">
+                            <span>Daily Profit</span>
+
+                            <strong>
+                                ${{ investment.daily_profit|floatformat:2 }}
+                            </strong>
+                        </div>
+
+
+                        <div class="investment-detail">
+                            <span>Duration</span>
+
+                            <strong>
+                                {{ investment.duration_days }} days
+                            </strong>
+                        </div>
+
+                    </div>
+
+
+                    <!-- INVESTMENT DATES -->
+                    <div class="investment-footer">
+
+                        <span>
+                            Started:
+                            {{ investment.start_date|date:"M d, Y" }}
+                        </span>
+
+
+                        {% if investment.end_date %}
+
+                            <span>
+                                Ends:
+                                {{ investment.end_date|date:"M d, Y" }}
+                            </span>
+
+                        {% endif %}
+
+                    </div>
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+
+    {% else %}
+
+        <!-- EMPTY STATE -->
+
+        <div class="empty-investments">
+
+            <div class="empty-icon">
+                📊
+            </div>
+
+            <h3>No investments yet</h3>
+
+            <p>
+                You haven't started an investment yet.
+                Choose a plan above to get started.
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+
+{% endblock %}

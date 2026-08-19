@@ -9,4 +9,5 @@ urlpatterns = [
         "",
         include("dashboard.urls"),
     ),
+    path("investments/", include("investments.urls")),
 ]

@@ -1,0 +1,229 @@
+.investment-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 30px 20px 60px;
+}
+
+.investment-header {
+    margin-bottom: 25px;
+}
+
+.back-link {
+    display: inline-block;
+    margin-bottom: 20px;
+    color: #16a34a;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.investment-header h1 {
+    margin: 0;
+    font-size: 32px;
+}
+
+.investment-header p {
+    margin-top: 8px;
+    color: #777;
+}
+
+
+.investment-card {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 30px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+
+.plan-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 25px;
+    border-bottom: 1px solid #eeeeee;
+}
+
+.label {
+    display: block;
+    color: #777;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.plan-header h2 {
+    margin: 0;
+    font-size: 26px;
+}
+
+.plan-status {
+    background: #e9f9ef;
+    color: #16a34a;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin: 25px 0;
+}
+
+.detail-box {
+    background: #f8faf9;
+    border-radius: 12px;
+    padding: 18px;
+}
+
+.detail-box span {
+    display: block;
+    color: #777;
+    font-size: 13px;
+    margin-bottom: 7px;
+}
+
+.detail-box strong {
+    font-size: 20px;
+}
+
+
+.investment-form {
+    margin-top: 30px;
+}
+
+.investment-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+
+.amount-input {
+    display: flex;
+    align-items: center;
+    border: 2px solid #e2e8e5;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.amount-input:focus-within {
+    border-color: #16a34a;
+}
+
+.amount-input span {
+    padding-left: 16px;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.amount-input input {
+    width: 100%;
+    border: none;
+    outline: none;
+    padding: 15px;
+    font-size: 20px;
+    background: transparent;
+}
+
+
+.input-help {
+    font-size: 13px;
+    color: #777;
+    margin-top: 7px;
+}
+
+
+.estimated-earning {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.estimated-earning div {
+    background: #f0fdf4;
+    border-radius: 12px;
+    padding: 18px;
+}
+
+.estimated-earning span {
+    display: block;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 6px;
+}
+
+.estimated-earning strong {
+    color: #16a34a;
+    font-size: 22px;
+}
+
+
+.notice {
+    margin-top: 25px;
+    padding: 18px;
+    border-radius: 12px;
+    background: #f8fafc;
+}
+
+.notice strong {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.notice p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+
+.confirm-button {
+    width: 100%;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 25px;
+    background: #16a34a;
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.confirm-button:hover {
+    background: #12813b;
+}
+
+
+@media (max-width: 650px) {
+
+    .investment-container {
+        padding: 20px 15px 40px;
+    }
+
+    .investment-header h1 {
+        font-size: 26px;
+    }
+
+    .investment-card {
+        padding: 20px;
+    }
+
+    .plan-header {
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .details-grid,
+    .estimated-earning {
+        grid-template-columns: 1fr;
+    }
+
+}

@@ -1,0 +1,321 @@
+/* =========================================================
+   KOREX — Investments
+   ========================================================= */
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 35px;
+}
+
+.page-header h1 {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.page-header p {
+    margin: 8px 0 0;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: 0.2s ease;
+}
+
+.back-button:hover {
+    border-color: #16a34a;
+    color: #16a34a;
+}
+
+
+/* =========================================================
+   Plans Section
+   ========================================================= */
+
+.plans-section {
+    width: 100%;
+}
+
+.section-heading {
+    margin-bottom: 22px;
+}
+
+.section-heading h2 {
+    margin: 0;
+    color: #111827;
+    font-size: 21px;
+    font-weight: 700;
+}
+
+.section-heading p {
+    margin: 7px 0 0;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+
+/* =========================================================
+   Plans Grid
+   ========================================================= */
+
+.plans-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 22px;
+}
+
+
+/* =========================================================
+   Investment Card
+   ========================================================= */
+
+.investment-plan {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 26px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.04);
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        border-color 0.25s ease;
+}
+
+.investment-plan:hover {
+    transform: translateY(-5px);
+    border-color: #bbf7d0;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+}
+
+
+/* =========================================================
+   Featured Plan
+   ========================================================= */
+
+.investment-plan.featured {
+    border: 2px solid #16a34a;
+    box-shadow: 0 10px 30px rgba(22, 163, 74, 0.12);
+}
+
+.popular-label {
+    position: absolute;
+    top: -1px;
+    right: 22px;
+    padding: 6px 12px;
+    background: #16a34a;
+    color: #ffffff;
+    border-radius: 0 0 8px 8px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+}
+
+
+/* =========================================================
+   Plan Top
+   ========================================================= */
+
+.plan-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 28px;
+}
+
+.plan-name {
+    color: #111827;
+    font-size: 21px;
+    font-weight: 700;
+}
+
+.plan-badge {
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: #f0fdf4;
+    color: #15803d;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   Price
+   ========================================================= */
+
+.plan-price {
+    padding-bottom: 22px;
+    border-bottom: 1px solid #f0f1f3;
+}
+
+.plan-price span {
+    display: block;
+    margin-bottom: 7px;
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.plan-price strong {
+    color: #111827;
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -1px;
+}
+
+
+/* =========================================================
+   Features
+   ========================================================= */
+
+.plan-features {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    margin: 23px 0;
+    padding: 0;
+    list-style: none;
+}
+
+.plan-features li {
+    color: #4b5563;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   Button
+   ========================================================= */
+
+.plan-button {
+    width: 100%;
+    margin-top: auto;
+    padding: 13px 18px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #111827;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.plan-button:hover {
+    border-color: #16a34a;
+    background: #f0fdf4;
+    color: #15803d;
+}
+
+.plan-button.primary {
+    border-color: #16a34a;
+    background: #16a34a;
+    color: #ffffff;
+}
+
+.plan-button.primary:hover {
+    background: #15803d;
+    border-color: #15803d;
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   Tablet
+   ========================================================= */
+
+@media (max-width: 1000px) {
+
+    .plans-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .investment-plan.featured {
+        grid-column: span 2;
+    }
+}
+
+
+/* =========================================================
+   Mobile
+   ========================================================= */
+
+@media (max-width: 650px) {
+
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        margin-bottom: 28px;
+    }
+
+    .page-header h1 {
+        font-size: 26px;
+    }
+
+    .back-button {
+        width: 100%;
+    }
+
+    .plans-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .investment-plan.featured {
+        grid-column: auto;
+    }
+
+    .investment-plan {
+        padding: 22px;
+    }
+
+    .plan-price strong {
+        font-size: 32px;
+    }
+}
+
+
+/* =========================================================
+   Small Phones
+   ========================================================= */
+
+@media (max-width: 400px) {
+
+    .investment-plan {
+        padding: 19px;
+        border-radius: 15px;
+    }
+
+    .plan-top {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .popular-label {
+        right: 15px;
+    }
+}
