@@ -10,6 +10,7 @@ class MembershipAdmin(admin.ModelAdmin):
         "user",
         "membership_type",
         "daily_sessions",
+        "earning_rate",
         "is_active",
         "activated_at",
         "updated_at",

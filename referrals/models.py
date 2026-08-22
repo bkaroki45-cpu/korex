@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 
 
 class ReferralProfile(models.Model):
@@ -9,6 +10,8 @@ class ReferralProfile(models.Model):
         on_delete=models.CASCADE,
         related_name="referral_profile",
     )
+
+    referral_code = models.CharField(max_length=20, unique=True, blank=True, null=True)
 
     total_referrals = models.PositiveIntegerField(
         default=0,

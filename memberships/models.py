@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 
@@ -5,8 +7,8 @@ from django.db import models
 class Membership(models.Model):
 
     class MembershipType(models.TextChoices):
-        BASIC = "BASIC", "Basic"
-        TEAM = "TEAM", "Team"
+        REGULAR = "REGULAR", "Regular"
+        TEAM_LEADER = "TEAM_LEADER", "Team Leader"
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -17,12 +19,14 @@ class Membership(models.Model):
     membership_type = models.CharField(
         max_length=20,
         choices=MembershipType.choices,
-        default=MembershipType.BASIC,
+        default=MembershipType.REGULAR,
     )
 
     daily_sessions = models.PositiveIntegerField(
-        default=3,
+        default=2,
     )
+
+    earning_rate = models.DecimalField(max_digits=8, decimal_places=4, default=Decimal("0.0200"))
 
     is_active = models.BooleanField(
         default=True,

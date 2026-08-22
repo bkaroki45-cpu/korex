@@ -40,32 +40,37 @@
 
             <nav class="sidebar-nav">
 
-                <a href="#" class="nav-item active">
+                <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                     <span class="nav-icon">⌂</span>
                     <span>Dashboard</span>
                 </a>
 
-                <a href="#" class="nav-item">
+                <a href="{% url 'investments:investments' %}" class="nav-item">
                     <span class="nav-icon">◈</span>
                     <span>Daily Sessions</span>
                 </a>
 
-                <a href="#" class="nav-item">
+                <a href="{% url 'investments:investments' %}" class="nav-item {% if request.resolver_match.namespace == 'investments' %}active{% endif %}">
                     <span class="nav-icon">▣</span>
                     <span>Investments</span>
                 </a>
 
-                <a href="#" class="nav-item">
+                <a href="{% url 'markets:markets' %}" class="nav-item {% if request.resolver_match.namespace == 'markets' %}active{% endif %}">
+                    <span class="nav-icon">M</span>
+                    <span>Market</span>
+                </a>
+
+                <a href="{% url 'dashboard' %}#wallet" class="nav-item">
                     <span class="nav-icon">◉</span>
                     <span>Wallet</span>
                 </a>
 
-                <a href="#" class="nav-item">
+                <a href="{% url 'dashboard' %}#transactions" class="nav-item">
                     <span class="nav-icon">↔</span>
                     <span>Transactions</span>
                 </a>
 
-                <a href="#" class="nav-item">
+                <a href="{% url 'dashboard' %}#team" class="nav-item">
                     <span class="nav-icon">♧</span>
                     <span>Team</span>
                 </a>
@@ -80,10 +85,9 @@
                     <span>Settings</span>
                 </a>
 
-                <a href="#" class="nav-item logout">
-                    <span class="nav-icon">↪</span>
-                    <span>Logout</span>
-                </a>
+                <form method="post" action="{% url 'logout' %}">{% csrf_token %}
+                    <button type="submit" class="nav-item logout"><span class="nav-icon">↪</span><span>Logout</span></button>
+                </form>
 
             </div>
 
@@ -122,11 +126,11 @@
                     <div class="user-mini">
 
                         <div class="user-avatar">
-                            U
+                            {{ request.user.first_name|default:request.user.email|first|upper }}
                         </div>
 
                         <div class="user-info">
-                            <strong>User</strong>
+                            <strong>{{ request.user.first_name|default:request.user.email }}</strong>
                             <small>Member</small>
                         </div>
 

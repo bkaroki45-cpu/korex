@@ -8,6 +8,7 @@ class ReferralProfileAdmin(admin.ModelAdmin):
 
     list_display = (
         "user",
+        "referral_code",
         "total_referrals",
         "active_referrals",
         "team_volume",
