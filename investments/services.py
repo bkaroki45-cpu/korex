@@ -1,8 +1,8 @@
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
 
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.utils import timezone
 
 from transactions.models import Transaction
@@ -10,7 +10,15 @@ from wallet.models import Wallet
 from .models import EarningSession, Investment, Signal, SignalParticipation
 
 KENYA_TZ = ZoneInfo("Africa/Nairobi")
+SIGNAL_WINDOW = timedelta(minutes=30)
+TRADE_SETTLEMENT_DELAY = timedelta(hours=5)
+SIGNAL_PROFIT_RATE = Decimal("0.0100")
 SIGNAL_TIMES = ((Signal.Slot.MORNING, time(10, 0)), (Signal.Slot.AFTERNOON, time(15, 0)), (Signal.Slot.EVENING, time(21, 0)))
+SIGNAL_TEMPLATES = (
+    ("BTC/USDT", "BUY", Decimal("62000")), ("ETH/USDT", "BUY", Decimal("3200")),
+    ("SOL/USDT", "SELL", Decimal("145")), ("XRP/USDT", "BUY", Decimal("0.55")),
+    ("BNB/USDT", "SELL", Decimal("590")), ("DOGE/USDT", "BUY", Decimal("0.12")),
+)
 
 
 def kenya_today():
@@ -18,22 +26,84 @@ def kenya_today():
 
 
 def create_scheduled_signals(for_date=None):
-    """Idempotent scheduler entry point; call it from Celery Beat, cron, or a command."""
+    """Idempotently create scheduled, simulated trade signals for Kenya time."""
     for_date = for_date or kenya_today()
     signals = []
-    for slot, signal_time in SIGNAL_TIMES:
-        scheduled_at = datetime.combine(for_date, signal_time, tzinfo=KENYA_TZ)
-        signal, _ = Signal.objects.get_or_create(
+    for index, (slot, signal_time) in enumerate(SIGNAL_TIMES):
+        pair, direction, entry = SIGNAL_TEMPLATES[(for_date.toordinal() + index) % len(SIGNAL_TEMPLATES)]
+        take_profit = entry * (Decimal("1.012") if direction == "BUY" else Decimal("0.988"))
+        stop_loss = entry * (Decimal("0.994") if direction == "BUY" else Decimal("1.006"))
+        signal, created = Signal.objects.get_or_create(
             signal_date=for_date, slot=slot,
-            defaults={"scheduled_at": scheduled_at, "status": Signal.Status.PUBLISHED},
+            defaults={"scheduled_at": datetime.combine(for_date, signal_time, tzinfo=KENYA_TZ), "pair": pair,
+                      "direction": direction, "entry_price": entry, "take_profit": take_profit,
+                      "stop_loss": stop_loss, "profit_rate": SIGNAL_PROFIT_RATE, "status": Signal.Status.PUBLISHED},
         )
+        # Populate legacy scheduled records that were created before signal details existed.
+        if not created and signal.entry_price is None:
+            signal.pair, signal.direction = pair, direction
+            signal.entry_price, signal.take_profit, signal.stop_loss = entry, take_profit, stop_loss
+            signal.profit_rate = SIGNAL_PROFIT_RATE
+            signal.save(update_fields=["pair", "direction", "entry_price", "take_profit", "stop_loss", "profit_rate"])
         signals.append(signal)
     return signals
 
 
+def eligible_signals_for_user(user, for_date=None):
+    signals = Signal.objects.filter(signal_date=for_date or kenya_today(), status=Signal.Status.PUBLISHED).order_by("scheduled_at")
+    if user.membership.membership_type == user.membership.MembershipType.REGULAR:
+        signals = signals.exclude(slot=Signal.Slot.AFTERNOON)
+    return signals
+
+
+@transaction.atomic
+def mark_missed_signals(now=None):
+    """Create immutable MISSED records after the 30-minute response window closes."""
+    now = now or timezone.now()
+    count = 0
+    for signal in Signal.objects.filter(status=Signal.Status.PUBLISHED, scheduled_at__lte=now - SIGNAL_WINDOW):
+        investments = Investment.objects.filter(status=Investment.Status.ACTIVE, start_date__lte=signal.scheduled_at, end_date__gt=signal.scheduled_at).select_related("user")
+        for investment in investments:
+            if investment.user.membership.membership_type == investment.user.membership.MembershipType.REGULAR and signal.slot == Signal.Slot.AFTERNOON:
+                continue
+            _, created = EarningSession.objects.get_or_create(
+                investment=investment, signal=signal,
+                defaults={"user": investment.user, "session_date": signal.signal_date, "display_asset": signal.pair,
+                          "display_direction": signal.direction, "display_entry_price": signal.entry_price,
+                          "display_take_profit": signal.take_profit, "display_stop_loss": signal.stop_loss,
+                          "earning_rate": signal.profit_rate, "status": EarningSession.Status.MISSED},
+            )
+            count += created
+    return count
+
+
+@transaction.atomic
+def settle_due_trades(now=None):
+    """Credit the wallet once, five hours after a simulated signal trade was recorded."""
+    now = now or timezone.now()
+    settled = 0
+    for session in EarningSession.objects.select_for_update().filter(status=EarningSession.Status.TRADED, payout_due_at__lte=now).select_related("investment", "user", "signal"):
+        wallet = Wallet.objects.select_for_update().get(user=session.user)
+        amount = session.earning_amount
+        before = wallet.available_balance
+        wallet.available_balance += amount
+        wallet.total_profit += amount
+        wallet.save(update_fields=["available_balance", "total_profit", "updated_at"])
+        session.status, session.settled_at = EarningSession.Status.SETTLED, now
+        session.save(update_fields=["status", "settled_at"])
+        investment = session.investment
+        investment.total_profit += amount
+        investment.current_value = investment.principal + investment.total_profit
+        investment.save(update_fields=["total_profit", "current_value", "updated_at"])
+        Transaction.objects.create(user=session.user, transaction_type=Transaction.TransactionType.PROFIT, amount=amount,
+            balance_before=before, balance_after=wallet.available_balance, reference=f"SIGNAL-SETTLED-{session.id}",
+            description=f"Settled simulated trade: {session.display_asset}", status=Transaction.Status.COMPLETED, completed_at=now)
+        settled += 1
+    return settled
+
+
 @transaction.atomic
 def mature_due_investments():
-    """Return due locked principal exactly once. Safe to run repeatedly."""
     now = timezone.now()
     matured = 0
     for investment in Investment.objects.select_for_update().filter(status=Investment.Status.ACTIVE, end_date__lte=now):
@@ -43,58 +113,34 @@ def mature_due_investments():
         wallet.save(update_fields=["available_balance", "locked_balance", "updated_at"])
         investment.status = Investment.Status.COMPLETED
         investment.save(update_fields=["status", "updated_at"])
-        try:
-            referral = investment.user.received_referral
-        except Exception:
-            referral = None
-        if referral:
-            from referrals.services import refresh_referrer_status
-            refresh_referrer_status(referral.referrer)
         matured += 1
     return matured
 
 
 @transaction.atomic
 def participate_in_signal(*, user, investment_id, signal_id):
-    today = kenya_today()
+    now = timezone.now()
     investment = Investment.objects.select_for_update().get(id=investment_id, user=user)
     signal = Signal.objects.select_for_update().get(id=signal_id)
-    now = timezone.now()
     if investment.status != Investment.Status.ACTIVE or not investment.end_date or investment.end_date <= now:
-        raise ValueError("This investment is not eligible for a signal.")
-    if signal.status != Signal.Status.PUBLISHED or signal.signal_date != today or signal.scheduled_at > now:
-        raise ValueError("This signal is not currently available.")
-    membership = user.membership
-    if membership.membership_type == membership.MembershipType.REGULAR and signal.slot == Signal.Slot.AFTERNOON:
-        raise ValueError("The third daily signal is available to Team Leaders only.")
+        raise ValueError("This trade balance is not eligible for a signal.")
+    if signal.status != Signal.Status.PUBLISHED or signal.scheduled_at > now:
+        raise ValueError("This signal is not available yet.")
+    if now > signal.scheduled_at + SIGNAL_WINDOW:
+        mark_missed_signals(now)
+        raise ValueError("This signal expired after its 30-minute trade window.")
+    if user.membership.membership_type == user.membership.MembershipType.REGULAR and signal.slot == Signal.Slot.AFTERNOON:
+        raise ValueError("The third signal is available to Team Leaders only.")
     if SignalParticipation.objects.filter(user=user, investment=investment, signal=signal).exists():
-        raise ValueError("You have already participated in this signal.")
+        raise ValueError("This signal was already traded.")
     SignalParticipation.objects.create(user=user, investment=investment, signal=signal)
-    try:
-        session = EarningSession.objects.select_for_update().get(investment=investment, signal=signal)
-    except EarningSession.DoesNotExist:
-        session = None
-    if session and session.status == EarningSession.Status.PARTICIPATED:
-        return Decimal("0.00"), False
-    earning_rate = Decimal(membership.earning_rate)
-    amount = (investment.principal * earning_rate).quantize(Decimal("0.01"))
-    wallet = Wallet.objects.select_for_update().get(user=user)
-    balance_before = wallet.available_balance
-    wallet.available_balance += amount
-    wallet.total_profit += amount
-    wallet.save(update_fields=["available_balance", "total_profit", "updated_at"])
-    if session is None:
-        session = EarningSession(investment=investment, user=user, signal=signal, session_date=today)
+    amount = (investment.principal * signal.profit_rate).quantize(Decimal("0.01"))
+    session, created = EarningSession.objects.get_or_create(investment=investment, signal=signal, defaults={"user": user, "session_date": signal.signal_date})
+    if not created or session.status == EarningSession.Status.MISSED:
+        raise ValueError("This signal is marked missed.")
     session.display_asset, session.display_direction = signal.pair, signal.direction
     session.display_entry_price, session.display_take_profit, session.display_stop_loss = signal.entry_price, signal.take_profit, signal.stop_loss
-    session.earning_rate, session.earning_amount = earning_rate, amount
-    session.status, session.participated_at = EarningSession.Status.PARTICIPATED, now
+    session.earning_rate, session.earning_amount = signal.profit_rate, amount
+    session.status, session.participated_at, session.payout_due_at = EarningSession.Status.TRADED, now, now + TRADE_SETTLEMENT_DELAY
     session.save()
-    Transaction.objects.create(user=user, transaction_type=Transaction.TransactionType.PROFIT, amount=amount,
-        balance_before=balance_before, balance_after=wallet.available_balance,
-        reference=f"SIGNAL-PROFIT-{investment.id}-{signal.id}",
-        description=f"Daily signal profit for investment #{investment.id}", status=Transaction.Status.COMPLETED, completed_at=now)
-    investment.total_profit += amount
-    investment.current_value = investment.principal + investment.total_profit
-    investment.save(update_fields=["total_profit", "current_value", "updated_at"])
-    return amount, True
+    return amount, session.payout_due_at

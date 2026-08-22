@@ -16,9 +16,7 @@ def dashboard(request):
         "active_investment": investments.filter(status=Investment.Status.ACTIVE).first(),
         "signals": Signal.objects.filter(signal_date=today, status=Signal.Status.PUBLISHED).order_by("scheduled_at"),
         "transactions": Transaction.objects.filter(user=request.user).order_by("-created_at")[:5],
-        "completed_today": request.user.earning_sessions.filter(session_date=today, status="PARTICIPATED").count(),
-        "membership": request.user.membership,
-        "referral_profile": request.user.referral_profile,
+        "completed_today": request.user.earning_sessions.filter(session_date=today, status="SETTLED").count(),
     })
 
 

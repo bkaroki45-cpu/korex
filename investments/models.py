@@ -39,7 +39,7 @@ class Investment(models.Model):
 
     @property
     def today_earned(self):
-        session = self.earning_sessions.filter(session_date=timezone.localdate(), status="PARTICIPATED").first()
+        session = self.earning_sessions.filter(session_date=timezone.localdate(), status="SETTLED").first()
         return session.earning_amount if session else Decimal("0.00")
 
 
@@ -62,6 +62,7 @@ class Signal(models.Model):
     entry_price = models.DecimalField(max_digits=20, decimal_places=8, blank=True, null=True)
     take_profit = models.DecimalField(max_digits=20, decimal_places=8, blank=True, null=True)
     stop_loss = models.DecimalField(max_digits=20, decimal_places=8, blank=True, null=True)
+    profit_rate = models.DecimalField(max_digits=8, decimal_places=4, default=Decimal("0.0100"))
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PUBLISHED)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -77,8 +78,9 @@ class EarningSession(models.Model):
     """Immutable payout ledger for a specific investment and published signal."""
     class Status(models.TextChoices):
         AVAILABLE = "AVAILABLE", "Available"
-        PARTICIPATED = "PARTICIPATED", "Participated"
-        EXPIRED = "EXPIRED", "Expired"
+        TRADED = "TRADED", "Traded"
+        MISSED = "MISSED", "Missed"
+        SETTLED = "SETTLED", "Settled"
 
     investment = models.ForeignKey(Investment, on_delete=models.CASCADE, related_name="earning_sessions")
     signal = models.ForeignKey(Signal, on_delete=models.SET_NULL, related_name="earning_sessions", null=True, blank=True)
@@ -93,6 +95,8 @@ class EarningSession(models.Model):
     earning_amount = models.DecimalField(max_digits=20, decimal_places=2, default=Decimal("0.00"))
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.AVAILABLE)
     participated_at = models.DateTimeField(blank=True, null=True)
+    payout_due_at = models.DateTimeField(blank=True, null=True)
+    settled_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

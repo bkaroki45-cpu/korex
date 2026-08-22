@@ -47,12 +47,12 @@
 
                 <a href="{% url 'investments:investments' %}" class="nav-item">
                     <span class="nav-icon">◈</span>
-                    <span>Daily Sessions</span>
+                    <span>Signals</span>
                 </a>
 
                 <a href="{% url 'investments:investments' %}" class="nav-item {% if request.resolver_match.namespace == 'investments' %}active{% endif %}">
                     <span class="nav-icon">▣</span>
-                    <span>Investments</span>
+                    <span>Track Your Trades</span>
                 </a>
 
                 <a href="{% url 'markets:markets' %}" class="nav-item {% if request.resolver_match.namespace == 'markets' %}active{% endif %}">
@@ -70,9 +70,9 @@
                     <span>Transactions</span>
                 </a>
 
-                <a href="{% url 'dashboard' %}#team" class="nav-item">
+                <a href="{% url 'referrals:overview' %}" class="nav-item {% if request.resolver_match.namespace == 'referrals' %}active{% endif %}">
                     <span class="nav-icon">♧</span>
-                    <span>Team</span>
+                    <span>Referrals & Earnings</span>
                 </a>
 
             </nav>

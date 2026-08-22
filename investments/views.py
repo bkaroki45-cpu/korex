@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.utils.timezone import timedelta
 
 from .models import Investment, Signal, SignalParticipation
-from .services import kenya_today, participate_in_signal
+from .services import eligible_signals_for_user, kenya_today, mark_missed_signals, participate_in_signal, settle_due_trades
 
 MINIMUM_INVESTMENT = Decimal("500.00")
 PLAN_DETAILS = {name: {"name": name.title(), "minimum": MINIMUM_INVESTMENT, "daily_rate": Decimal("0.0200"), "duration_days": 35}
@@ -18,16 +18,17 @@ PLAN_DETAILS = {name: {"name": name.title(), "minimum": MINIMUM_INVESTMENT, "dai
 @login_required
 def investments(request):
     today = kenya_today()
+    mark_missed_signals()
+    settle_due_trades()
     user_investments = Investment.objects.filter(user=request.user).order_by("-start_date")
-    signals = Signal.objects.filter(signal_date=today, status=Signal.Status.PUBLISHED).order_by("scheduled_at")
-    if request.user.membership.membership_type == request.user.membership.MembershipType.REGULAR:
-        signals = signals.exclude(slot=Signal.Slot.AFTERNOON)
+    signals = eligible_signals_for_user(request.user, today)
     active_investments = user_investments.filter(status=Investment.Status.ACTIVE, end_date__gt=timezone.now())
     participation_ids = set(SignalParticipation.objects.filter(user=request.user, signal__in=signals).values_list("signal_id", flat=True))
     paid_ids = set(user_investments.filter(earning_sessions__session_date=today, earning_sessions__status="PARTICIPATED").values_list("id", flat=True))
     return render(request, "investments/investments.html", {
         "investments": user_investments, "signals": signals, "active_investments": active_investments,
         "participation_ids": participation_ids, "paid_ids": paid_ids, "today": today,
+        "trade_history": request.user.earning_sessions.select_related("signal").order_by("-created_at")[:12],
     })
 
 
@@ -66,7 +67,7 @@ def create_investment(request, plan):
             if referral:
                 from referrals.services import refresh_referrer_status
                 refresh_referrer_status(referral.referrer)
-        messages.success(request, f"Your ${amount} investment is active. Its principal is locked for 35 days.")
+        messages.success(request, f"Your ${amount} trade balance is active and locked for 35 days.")
         return redirect("investments:investments")
     return render(request, "investments/create_investment.html", {"plan": plan, "plan_details": plan_details, "wallet": wallet})
 
@@ -77,7 +78,7 @@ def participate(request, signal_id):
         return redirect("investments:investments")
     investment_id = request.POST.get("investment_id")
     try:
-        amount, paid = participate_in_signal(user=request.user, investment_id=int(investment_id), signal_id=signal_id)
+        amount, payout_due_at = participate_in_signal(user=request.user, investment_id=int(investment_id), signal_id=signal_id)
     except Investment.DoesNotExist:
         messages.error(request, "Investment not found.")
     except Signal.DoesNotExist:
@@ -85,10 +86,8 @@ def participate(request, signal_id):
     except (TypeError, ValueError) as error:
         messages.error(request, str(error) or "Choose a valid investment.")
     else:
-        if paid:
-            messages.success(request, f"Participation recorded. ${amount} profit was added to your available balance.")
-        else:
-            messages.success(request, "Participation recorded. This investment has already received its maximum 2% profit for today.")
+        settlement_time = timezone.localtime(payout_due_at).strftime("%H:%M")
+        messages.success(request, f"Trade recorded. ${amount} is scheduled to settle to your wallet after {settlement_time}.")
     return redirect("investments:investments")
 
 
