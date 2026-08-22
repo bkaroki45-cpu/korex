@@ -342,3 +342,9 @@ button {
     }
 
 }
+
+.app-messages { display: flex; flex-direction: column; gap: 9px; margin-bottom: 16px; }
+.app-message { padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel-light); font-size: 13px; }
+.app-message.success { border-color: rgba(48, 182, 75, .5); color: #9ee8ae; }
+.app-message.error { border-color: rgba(239, 83, 80, .5); color: #ffaaa8; }
+.app-message.warning { color: #f3d99e; }

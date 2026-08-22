@@ -43,7 +43,7 @@ def submit_transaction_hash(*, user, transaction_hash):
     address = get_deposit_address(user)
     if CryptoDeposit.objects.filter(transaction_hash=transaction_hash).exists():
         raise ValueError("This transaction hash has already been submitted.")
-    deposit = CryptoDeposit.objects.create(user=user, deposit_address=address, transaction_hash=transaction_hash, provider=address.provider if False else None)
+    deposit = CryptoDeposit.objects.create(user=user, deposit_address=address, transaction_hash=transaction_hash)
     result = custody_provider().verify_transaction(deposit)
     deposit.status, deposit.verification_note = result["status"], result["note"]
     deposit.save(update_fields=["status", "verification_note", "updated_at"])
@@ -70,3 +70,36 @@ def credit_confirmed_deposit(deposit):
 
 def create_onramp_order(user, amount_kes):
     return OnRampOrder.objects.create(user=user, provider=CRYPTO_PROVIDER_NAME if CRYPTO_PROVIDER_MODE != "mock" else "mock", amount_kes=amount_kes, provider_reference=f"ONRAMP-{secrets.token_urlsafe(12)}", status=OnRampOrder.Status.INITIATED)
+
+
+@transaction.atomic
+def record_provider_deposit(*, recipient_address, transaction_hash, amount, asset, network, status, provider_reference=None):
+    """Entry point for a real provider webhook after its signature is verified.
+
+    A future provider adapter must supply values obtained from the provider/blockchain,
+    never values received directly from a browser form.
+    """
+    try:
+        amount = Decimal(str(amount))
+    except Exception as error:
+        raise ValueError("Provider amount is invalid.") from error
+    if status not in CryptoDeposit.Status.values:
+        raise ValueError("Provider status is invalid.")
+    address = DepositAddress.objects.select_for_update().select_related("user").filter(address=recipient_address, asset=asset, network=network, is_active=True).first()
+    if not address:
+        raise ValueError("Recipient address is not an active KOREX deposit address.")
+    deposit, created = CryptoDeposit.objects.select_for_update().get_or_create(
+        transaction_hash=transaction_hash,
+        defaults={"user": address.user, "deposit_address": address, "asset": asset, "network": network,
+                  "amount": amount, "provider_reference": provider_reference, "status": status},
+    )
+    if not created:
+        return deposit, False
+    if amount < MINIMUM_USDT_DEPOSIT:
+        deposit.status, deposit.verification_note = CryptoDeposit.Status.REJECTED, "Deposit is below the minimum amount."
+    elif status == CryptoDeposit.Status.CONFIRMED:
+        deposit.confirmed_at = timezone.now()
+    deposit.save()
+    if deposit.status == CryptoDeposit.Status.CONFIRMED:
+        credit_confirmed_deposit(deposit)
+    return deposit, True

@@ -1,0 +1,2 @@
+.coin-symbol{display:grid;place-items:center;width:31px;height:31px;border-radius:50%;background:#17351d;color:var(--primary);font-weight:800}.market-loading{padding:24px;border:1px dashed var(--border);border-radius:11px;color:var(--muted);font-size:13px}
+.chart-loading{height:100%;display:grid;place-items:center;color:var(--muted);font-size:13px}.chart-error{padding:24px;text-align:center;color:#f2c092}

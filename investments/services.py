@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from transactions.models import Transaction
 from wallet.models import Wallet
+from memberships.models import Membership
 from .models import EarningSession, Investment, Signal, SignalParticipation
 
 KENYA_TZ = ZoneInfo("Africa/Nairobi")
@@ -23,6 +24,12 @@ SIGNAL_TEMPLATES = (
 
 def kenya_today():
     return timezone.now().astimezone(KENYA_TZ).date()
+
+
+def membership_for_user(user):
+    """Return a membership for both new and legacy accounts."""
+    membership, _ = Membership.objects.get_or_create(user=user)
+    return membership
 
 
 def create_scheduled_signals(for_date=None):
@@ -51,7 +58,8 @@ def create_scheduled_signals(for_date=None):
 
 def eligible_signals_for_user(user, for_date=None):
     signals = Signal.objects.filter(signal_date=for_date or kenya_today(), status=Signal.Status.PUBLISHED).order_by("scheduled_at")
-    if user.membership.membership_type == user.membership.MembershipType.REGULAR:
+    membership = membership_for_user(user)
+    if membership.membership_type == Membership.MembershipType.REGULAR:
         signals = signals.exclude(slot=Signal.Slot.AFTERNOON)
     return signals
 
@@ -64,7 +72,8 @@ def mark_missed_signals(now=None):
     for signal in Signal.objects.filter(status=Signal.Status.PUBLISHED, scheduled_at__lte=now - SIGNAL_WINDOW):
         investments = Investment.objects.filter(status=Investment.Status.ACTIVE, start_date__lte=signal.scheduled_at, end_date__gt=signal.scheduled_at).select_related("user")
         for investment in investments:
-            if investment.user.membership.membership_type == investment.user.membership.MembershipType.REGULAR and signal.slot == Signal.Slot.AFTERNOON:
+            membership = membership_for_user(investment.user)
+            if membership.membership_type == Membership.MembershipType.REGULAR and signal.slot == Signal.Slot.AFTERNOON:
                 continue
             _, created = EarningSession.objects.get_or_create(
                 investment=investment, signal=signal,
@@ -129,7 +138,8 @@ def participate_in_signal(*, user, investment_id, signal_id):
     if now > signal.scheduled_at + SIGNAL_WINDOW:
         mark_missed_signals(now)
         raise ValueError("This signal expired after its 30-minute trade window.")
-    if user.membership.membership_type == user.membership.MembershipType.REGULAR and signal.slot == Signal.Slot.AFTERNOON:
+    membership = membership_for_user(user)
+    if membership.membership_type == Membership.MembershipType.REGULAR and signal.slot == Signal.Slot.AFTERNOON:
         raise ValueError("The third signal is available to Team Leaders only.")
     if SignalParticipation.objects.filter(user=user, investment=investment, signal=signal).exists():
         raise ValueError("This signal was already traded.")

@@ -1,162 +1,39 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}KOREX{% endblock %}</title>
-
-    <link
-        rel="stylesheet"
-        href="{% static 'css/base.css' %}"
-    >
-
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/mobile-nav.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
-
 <body>
-
     <div class="app-shell">
-
-        <!-- SIDEBAR -->
         <aside class="sidebar" id="sidebar">
-
-            <div class="brand">
-                <div class="brand-logo">
-                    K
-                </div>
-
-                <div class="brand-name">
-                    KOREX
-                </div>
-            </div>
-
-
+            <a href="{% url 'dashboard' %}" class="brand"><span class="brand-logo">K</span><span class="brand-name">KOREX</span></a>
             <nav class="sidebar-nav">
-
-                <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                    <span class="nav-icon">⌂</span>
-                    <span>Dashboard</span>
-                </a>
-
-                <a href="{% url 'investments:investments' %}" class="nav-item">
-                    <span class="nav-icon">◈</span>
-                    <span>Signals</span>
-                </a>
-
-                <a href="{% url 'investments:investments' %}" class="nav-item {% if request.resolver_match.namespace == 'investments' %}active{% endif %}">
-                    <span class="nav-icon">▣</span>
-                    <span>Track Your Trades</span>
-                </a>
-
-                <a href="{% url 'markets:markets' %}" class="nav-item {% if request.resolver_match.namespace == 'markets' %}active{% endif %}">
-                    <span class="nav-icon">M</span>
-                    <span>Market</span>
-                </a>
-
-                <a href="{% url 'dashboard' %}#wallet" class="nav-item">
-                    <span class="nav-icon">◉</span>
-                    <span>Wallet</span>
-                </a>
-
-                <a href="{% url 'dashboard' %}#transactions" class="nav-item">
-                    <span class="nav-icon">↔</span>
-                    <span>Transactions</span>
-                </a>
-
-                <a href="{% url 'referrals:overview' %}" class="nav-item {% if request.resolver_match.namespace == 'referrals' %}active{% endif %}">
-                    <span class="nav-icon">♧</span>
-                    <span>Referrals & Earnings</span>
-                </a>
-
+                <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><span class="nav-icon">⌂</span><span>Dashboard</span></a>
+                <a href="{% url 'markets:markets' %}" class="nav-item {% if request.resolver_match.namespace == 'markets' %}active{% endif %}"><span class="nav-icon">↗</span><span>Markets</span></a>
+                <a href="{% url 'investments:investments' %}" class="nav-item {% if request.resolver_match.namespace == 'investments' %}active{% endif %}"><span class="nav-icon">◈</span><span>Copy Trading</span></a>
+                <a href="{% url 'referrals:overview' %}" class="nav-item {% if request.resolver_match.namespace == 'referrals' %}active{% endif %}"><span class="nav-icon">♙</span><span>Profile</span></a>
             </nav>
-
-
-            <div class="sidebar-bottom">
-
-                <a href="#" class="nav-item">
-                    <span class="nav-icon">⚙</span>
-                    <span>Settings</span>
-                </a>
-
-                <form method="post" action="{% url 'logout' %}">{% csrf_token %}
-                    <button type="submit" class="nav-item logout"><span class="nav-icon">↪</span><span>Logout</span></button>
-                </form>
-
-            </div>
-
+            <div class="sidebar-bottom"><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="nav-item logout"><span class="nav-icon">↪</span><span>Logout</span></button></form></div>
         </aside>
-
-
-        <!-- MAIN -->
         <main class="main-content">
-
-            <!-- TOPBAR -->
             <header class="topbar">
-
-                <button
-                    class="menu-button"
-                    onclick="toggleSidebar()"
-                >
-                    ☰
-                </button>
-
-
-                <div class="page-title">
-                    {% block page_title %}
-                    Dashboard
-                    {% endblock %}
-                </div>
-
-
-                <div class="topbar-right">
-
-                    <button class="notification-button">
-                        🔔
-                        <span class="notification-dot"></span>
-                    </button>
-
-
-                    <div class="user-mini">
-
-                        <div class="user-avatar">
-                            {{ request.user.first_name|default:request.user.email|first|upper }}
-                        </div>
-
-                        <div class="user-info">
-                            <strong>{{ request.user.first_name|default:request.user.email }}</strong>
-                            <small>Member</small>
-                        </div>
-
-                    </div>
-
-                </div>
-
+                <button class="menu-button" onclick="toggleSidebar()" aria-label="Toggle navigation">☰</button>
+                <div class="page-title">{% block page_title %}Dashboard{% endblock %}</div>
+                <div class="topbar-right"><button class="notification-button" aria-label="Notifications">●<span class="notification-dot"></span></button><div class="user-mini"><div class="user-avatar">{{ request.user.first_name|default:request.user.email|first|upper }}</div><div class="user-info"><strong>{{ request.user.first_name|default:request.user.email }}</strong><small>Member</small></div></div></div>
             </header>
-
-
-            <!-- PAGE CONTENT -->
             <section class="page-content">
-
-                {% block content %}
-                {% endblock %}
-
+                {% if messages %}<div class="app-messages">{% for message in messages %}<div class="app-message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+                {% block content %}{% endblock %}
             </section>
-
         </main>
-
     </div>
-
-
     <script src="{% static 'js/base.js' %}"></script>
-
     {% block extra_js %}{% endblock %}
-
 </body>
 </html>

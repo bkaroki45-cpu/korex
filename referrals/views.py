@@ -3,12 +3,16 @@ from django.db.models import Sum
 from django.shortcuts import render
 
 from investments.models import Investment
-from .models import Referral
+from .models import Referral, ReferralProfile
+from .services import new_referral_code
 
 
 @login_required
 def referrals_earnings(request):
-    profile = request.user.referral_profile
+    profile, _ = ReferralProfile.objects.get_or_create(
+        user=request.user,
+        defaults={"referral_code": new_referral_code()},
+    )
     referrals = Referral.objects.filter(referrer=request.user).select_related("referred_user").order_by("-created_at")
     team = []
     for referral in referrals:

@@ -1,0 +1,52 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="KOREX is a signal-led copy-trading platform for following curated crypto trade ideas with clarity.">
+    <title>KOREX — Copy signals with clarity</title>
+    <link rel="stylesheet" href="{% static 'core/css/home.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/home-buttons.css' %}">
+</head>
+<body>
+    <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+    <nav class="home-nav">
+        <a href="{% url 'home' %}" class="home-brand"><span>K</span> KOREX</a>
+        <div class="nav-links"><a href="#features">Copy trading</a><a href="#markets">Markets</a><a href="#how-it-works">How it works</a></div>
+        <div class="nav-actions"><a class="login-link" href="{% url 'login' %}">Log in</a><a class="button button-small" href="{% url 'signup' %}">Create account <b>→</b></a></div>
+    </nav>
+
+    <main>
+        <section class="hero">
+            <div class="hero-copy">
+                <div class="eyebrow"><i></i> Signal-led copy trading</div>
+                <h1>Follow smarter <em>trade signals</em><br>with more clarity.</h1>
+                <p>KOREX is built for copy trading: receive curated crypto trade ideas, choose the signals you want to follow, and track every response in one focused workspace.</p>
+                <div class="hero-actions"><a class="button" href="{% url 'signup' %}">Start copy trading <b>→</b></a><a class="watch-link" href="#how-it-works"><span>▶</span> How signal copying works</a></div>
+                <div class="trust-row"><div class="avatars"><i>J</i><i>M</i><i>A</i><i>S</i></div><span>For people who want a clearer way to follow signals</span></div>
+            </div>
+            <div class="hero-visual" aria-label="Animated market dashboard preview">
+                <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+                <div class="float-chip chip-bitcoin">₿ <span>BTC<br><b>+2.84%</b></span></div>
+                <div class="float-chip chip-ethereum">◆ <span>ETH<br><b>+1.16%</b></span></div>
+                <article class="terminal-card">
+                    <header><div class="terminal-title"><span class="coin">₿</span><div><strong>BTC / USDT</strong><small>Bitcoin</small></div></div><span class="live"><i></i> LIVE</span></header>
+                    <div class="terminal-price"><strong>$67,842.90</strong><span>+2.84% <b>↗</b></span></div>
+                    <div class="chart"><svg viewBox="0 0 560 190" preserveAspectRatio="none" role="img"><defs><linearGradient id="chartfill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#55e777" stop-opacity=".35"/><stop offset="1" stop-color="#55e777" stop-opacity="0"/></linearGradient></defs><path class="chart-area" d="M0,155 C22,143 27,163 46,141 S71,151 90,120 S117,130 140,112 S168,138 190,98 S219,106 238,74 S258,99 280,88 S303,104 326,60 S351,66 374,50 S400,84 420,36 S448,52 468,30 S493,66 516,24 S544,36 560,10 V190 H0Z"/><path class="chart-line" d="M0,155 C22,143 27,163 46,141 S71,151 90,120 S117,130 140,112 S168,138 190,98 S219,106 238,74 S258,99 280,88 S303,104 326,60 S351,66 374,50 S400,84 420,36 S448,52 468,30 S493,66 516,24 S544,36 560,10"/></svg><div class="chart-grid"></div></div>
+                    <footer><span>24h high <b>$68,210</b></span><span>24h volume <b>$34.2B</b></span><span>Copy signal <b class="green">Bullish</b></span></footer>
+                </article>
+                <div class="trade-toast"><span>✓</span><div><small>Copy signal ready</small><strong>BTC momentum detected</strong></div><b>now</b></div>
+            </div>
+        </section>
+
+        <section class="ticker" id="markets"><div class="ticker-track"><span>₿ BTC <b>+2.84%</b></span><span>◆ ETH <b>+1.16%</b></span><span>◎ SOL <b>+3.42%</b></span><span>◈ BNB <b>+0.86%</b></span><span>✕ XRP <b>+1.92%</b></span><span>₿ BTC <b>+2.84%</b></span><span>◆ ETH <b>+1.16%</b></span><span>◎ SOL <b>+3.42%</b></span><span>◈ BNB <b>+0.86%</b></span></div></section>
+
+        <section class="features" id="features"><div class="section-heading"><span class="eyebrow">Copy signals. Keep control.</span><h2>Built around the<br>signals you follow.</h2></div><div class="feature-grid"><article><span class="feature-icon">⌁</span><h3>Curated copy signals</h3><p>See the pair, entry, take-profit target, risk level, and timing before choosing whether to follow a signal.</p><a href="{% url 'signup' %}">Explore signals <b>→</b></a></article><article class="featured"><span class="feature-icon">✦</span><h3>Your decision, every time</h3><p>KOREX helps you follow trade ideas; you choose each signal and can track whether you took it or missed it.</p><a href="{% url 'signup' %}">How it works <b>→</b></a></article><article><span class="feature-icon">◫</span><h3>Transparent tracking</h3><p>Review your copied-signal history, outcomes, wallet activity, and referral progress from one dashboard.</p><a href="{% url 'signup' %}">Open your dashboard <b>→</b></a></article></div></section>
+
+        <section class="steps" id="how-it-works"><div><span class="eyebrow">Copy trading, made clear</span><h2>Ready to follow<br>your next signal?</h2><p>Set up your profile, review the signal details, then decide which ideas fit your own plan. Markets carry risk; outcomes are never guaranteed.</p><a class="button" href="{% url 'signup' %}">Create your account <b>→</b></a></div><ol><li><b>01</b><div><h3>Create your account</h3><p>Join with your email and securely set up your profile.</p></div></li><li><b>02</b><div><h3>Review a copy signal</h3><p>Read the pair, entry, target, and signal window before you participate.</p></div></li><li><b>03</b><div><h3>Track what you follow</h3><p>Keep a clear history of your signal choices and activity in KOREX.</p></div></li></ol></section>
+    </main>
+    <footer><a class="home-brand" href="{% url 'home' %}"><span>K</span> KOREX</a><p>Signal-led copy trading for a more focused routine.</p><div><a href="{% url 'login' %}">Log in</a><a href="{% url 'signup' %}">Create account</a></div></footer>
+    <script src="{% static 'core/js/home.js' %}"></script>
+</body>
+</html>
