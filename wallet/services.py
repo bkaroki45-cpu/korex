@@ -87,7 +87,7 @@ def record_provider_deposit(*, recipient_address, transaction_hash, amount, asse
         raise ValueError("Provider status is invalid.")
     address = DepositAddress.objects.select_for_update().select_related("user").filter(address=recipient_address, asset=asset, network=network, is_active=True).first()
     if not address:
-        raise ValueError("Recipient address is not an active KOREX deposit address.")
+        raise ValueError("Recipient address is not an active CLOUDD 1 deposit address.")
     deposit, created = CryptoDeposit.objects.select_for_update().get_or_create(
         transaction_hash=transaction_hash,
         defaults={"user": address.user, "deposit_address": address, "asset": asset, "network": network,

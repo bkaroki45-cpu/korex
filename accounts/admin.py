@@ -26,7 +26,7 @@ class CustomUserAdmin(UserAdmin):
 
     fieldsets = UserAdmin.fieldsets + (
         (
-            "KOREX Information",
+            "CLOUDD 1 Information",
             {
                 "fields": (
                     "phone_number",
@@ -40,7 +40,7 @@ class CustomUserAdmin(UserAdmin):
 
     add_fieldsets = UserAdmin.add_fieldsets + (
         (
-            "KOREX Information",
+            "CLOUDD 1 Information",
             {
                 "fields": (
                     "email",

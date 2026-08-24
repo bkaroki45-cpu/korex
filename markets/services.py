@@ -19,7 +19,7 @@ def get_market_assets():
     if cached is not None:
         return cached
     try:
-        request = Request(COINGECKO_MARKETS_URL, headers={"Accept": "application/json", "User-Agent": "KOREX-Markets/1.0"})
+        request = Request(COINGECKO_MARKETS_URL, headers={"Accept": "application/json", "User-Agent": "CLOUDD 1-Markets/1.0"})
         with urlopen(request, timeout=8) as response:
             assets = json.loads(response.read().decode("utf-8"))
     except Exception:
@@ -32,7 +32,7 @@ def get_market_assets():
 def _get_binance_assets():
     """Public fallback with live ticker values if CoinGecko is unavailable."""
     try:
-        request = Request(BINANCE_TICKERS_URL, headers={"Accept": "application/json", "User-Agent": "KOREX-Markets/1.0"})
+        request = Request(BINANCE_TICKERS_URL, headers={"Accept": "application/json", "User-Agent": "CLOUDD 1-Markets/1.0"})
         with urlopen(request, timeout=8) as response:
             tickers = {ticker["symbol"]: ticker for ticker in json.loads(response.read().decode("utf-8"))}
         assets = []
@@ -50,7 +50,7 @@ def _fetch_json(url, cache_key, seconds=60):
     if cached is not None:
         return cached
     try:
-        request = Request(url, headers={"Accept": "application/json", "User-Agent": "KOREX-Markets/1.0"})
+        request = Request(url, headers={"Accept": "application/json", "User-Agent": "CLOUDD 1-Markets/1.0"})
         with urlopen(request, timeout=8) as response:
             data = json.loads(response.read().decode("utf-8"))
     except Exception:
@@ -68,7 +68,7 @@ def get_market_news():
     if cached is not None:
         return cached
     try:
-        request = Request(CRYPTO_NEWS_RSS_URL, headers={"User-Agent": "KOREX-Markets/1.0"})
+        request = Request(CRYPTO_NEWS_RSS_URL, headers={"User-Agent": "CLOUDD 1-Markets/1.0"})
         with urlopen(request, timeout=8) as response:
             root = ET.fromstring(response.read())
         articles = []

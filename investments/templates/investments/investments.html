@@ -1,8 +1,8 @@
 {% extends "base.html" %}{% load static %}
-{% block title %}KOREX — Copy Trading{% endblock %}{% block page_title %}Copy Trading{% endblock %}
+{% block title %}CLOUDD 1 — Copy Trading{% endblock %}{% block page_title %}Copy Trading{% endblock %}
 {% block extra_css %}<link rel="stylesheet" href="{% static 'investments/css/investments.css' %}">{% endblock %}
 {% block content %}
-<div class="copy-header"><div><span class="copy-kicker">SIGNAL-LED COPY TRADING</span><h1>Copy Trading</h1><p>Review the live signal, then choose whether to record it with your trade balance. No exchange order is placed by KOREX.</p></div><a class="copy-wallet-link" href="{% url 'wallet:deposit_crypto' %}">Fund trade wallet <b>→</b></a></div>
+<div class="copy-header"><div><span class="copy-kicker">SIGNAL-LED COPY TRADING</span><h1>Copy Trading</h1><p>Review the live signal, then choose whether to record it with your trade balance. No exchange order is placed by CLOUDD 1.</p></div><a class="copy-wallet-link" href="{% url 'wallet:deposit_crypto' %}">Fund trade wallet <b>→</b></a></div>
 
 <section class="copy-summary"><article><span>Live signals</span><strong>{{ signals|length }}</strong><small>Available today</small></article><article><span>Active trade balances</span><strong>{{ active_investments|length }}</strong><small>Ready to follow a signal</small></article><article><span>Signals copied</span><strong>{{ trade_history|length }}</strong><small>Recent activity</small></article></section>
 
