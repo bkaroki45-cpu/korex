@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.utils.timezone import timedelta
 
 from .models import Investment, Signal, SignalParticipation
-from .services import eligible_signals_for_user, kenya_today, mark_missed_signals, participate_in_signal, settle_due_trades
+from .services import create_scheduled_signals, eligible_signals_for_user, kenya_today, mark_missed_signals, membership_for_user, participate_in_signal, settle_due_trades
 
 MINIMUM_INVESTMENT = Decimal("500.00")
 PLAN_DETAILS = {name: {"name": name.title(), "minimum": MINIMUM_INVESTMENT, "daily_rate": Decimal("0.0200"), "duration_days": 35}
@@ -18,16 +18,18 @@ PLAN_DETAILS = {name: {"name": name.title(), "minimum": MINIMUM_INVESTMENT, "dai
 @login_required
 def investments(request):
     today = kenya_today()
+    create_scheduled_signals(today)
     mark_missed_signals()
     settle_due_trades()
     user_investments = Investment.objects.filter(user=request.user).order_by("-start_date")
     signals = eligible_signals_for_user(request.user, today)
     active_investments = user_investments.filter(status=Investment.Status.ACTIVE, end_date__gt=timezone.now())
     participation_ids = set(SignalParticipation.objects.filter(user=request.user, signal__in=signals).values_list("signal_id", flat=True))
-    paid_ids = set(user_investments.filter(earning_sessions__session_date=today, earning_sessions__status="PARTICIPATED").values_list("id", flat=True))
+    paid_ids = set(user_investments.filter(earning_sessions__session_date=today, earning_sessions__status="ACTIVE").values_list("id", flat=True))
     return render(request, "investments/investments.html", {
         "investments": user_investments, "signals": signals, "active_investments": active_investments,
         "participation_ids": participation_ids, "paid_ids": paid_ids, "today": today,
+        "is_team_leader": membership_for_user(request.user).membership_type == "TEAM_LEADER",
         "trade_history": request.user.earning_sessions.select_related("signal").order_by("-created_at")[:12],
     })
 

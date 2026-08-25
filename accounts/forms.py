@@ -24,10 +24,12 @@ class SignUpForm(UserCreationForm):
     phone_local = forms.CharField(max_length=16, label="Phone number")
     country = forms.ChoiceField(choices=COUNTRIES)
     referral_code = forms.CharField(max_length=20, required=False, label="Referral code (optional)")
+    withdrawal_address = forms.CharField(max_length=255, label="Crypto withdrawal address")
+    withdrawal_network = forms.ChoiceField(choices=(), label="Withdrawal network")
 
     class Meta:
         model = User
-        fields = ("first_name", "last_name", "email", "country", "dial_code", "phone_local", "referral_code", "password1", "password2")
+        fields = ("first_name", "last_name", "email", "country", "dial_code", "phone_local", "withdrawal_address", "withdrawal_network", "referral_code", "password1", "password2")
         labels = {"first_name": "First name", "last_name": "Last name", "email": "Email address"}
 
     def __init__(self, *args, **kwargs):
@@ -40,6 +42,9 @@ class SignUpForm(UserCreationForm):
             self.fields["referral_code"].initial = self.initial["referral_code"]
         self.fields["password1"].widget.attrs["autocomplete"] = "new-password"
         self.fields["password2"].widget.attrs["autocomplete"] = "new-password"
+        from wallet.models import WithdrawalNetwork
+        networks = WithdrawalNetwork.objects.filter(is_enabled=True).values_list("code", "name")
+        self.fields["withdrawal_network"].choices = list(networks) or [("TRC20", "TRC20")]
 
     def clean_email(self):
         return self.cleaned_data["email"].strip().lower()
@@ -58,6 +63,8 @@ class SignUpForm(UserCreationForm):
         user.username = self.cleaned_data["email"]
         user.phone_number = f"{self.cleaned_data['dial_code']}{self.cleaned_data['phone_local']}"
         user.country = self.cleaned_data["country"]
+        user.withdrawal_address = self.cleaned_data["withdrawal_address"].strip()
+        user.withdrawal_network = self.cleaned_data["withdrawal_network"]
         if commit:
             user.save()
         return user
@@ -70,3 +77,18 @@ class EmailAuthenticationForm(AuthenticationForm):
         super().__init__(*args, **kwargs)
         self.fields["username"].widget.attrs["autocomplete"] = "email"
         self.fields["password"].widget.attrs["autocomplete"] = "current-password"
+
+
+class WithdrawalDetailsForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ("withdrawal_address", "withdrawal_network")
+        labels = {"withdrawal_address": "Crypto withdrawal address", "withdrawal_network": "Network"}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from wallet.models import WithdrawalNetwork
+        self.fields["withdrawal_network"] = forms.ChoiceField(
+            choices=list(WithdrawalNetwork.objects.filter(is_enabled=True).values_list("code", "name")) or [("TRC20", "TRC20")],
+            initial=self.instance.withdrawal_network,
+        )

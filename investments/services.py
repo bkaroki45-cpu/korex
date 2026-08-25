@@ -7,14 +7,15 @@ from django.utils import timezone
 
 from transactions.models import Transaction
 from wallet.models import Wallet
+from wallet.models import PlatformConfiguration
 from memberships.models import Membership
 from .models import EarningSession, Investment, Signal, SignalParticipation
 
 KENYA_TZ = ZoneInfo("Africa/Nairobi")
-SIGNAL_WINDOW = timedelta(minutes=30)
-TRADE_SETTLEMENT_DELAY = timedelta(hours=5)
+SIGNAL_WINDOW = timedelta(minutes=15)
+TRADE_SETTLEMENT_DELAY = timedelta(minutes=45)
 SIGNAL_PROFIT_RATE = Decimal("0.0100")
-SIGNAL_TIMES = ((Signal.Slot.MORNING, time(10, 0)), (Signal.Slot.AFTERNOON, time(15, 0)), (Signal.Slot.EVENING, time(21, 0)))
+SIGNAL_TIMES = ((Signal.Slot.MORNING, time(17, 0)), (Signal.Slot.AFTERNOON, time(19, 0)), (Signal.Slot.EVENING, time(20, 0)))
 SIGNAL_TEMPLATES = (
     ("BTC/USDT", "BUY", Decimal("62000")), ("ETH/USDT", "BUY", Decimal("3200")),
     ("SOL/USDT", "SELL", Decimal("145")), ("XRP/USDT", "BUY", Decimal("0.55")),
@@ -57,11 +58,12 @@ def create_scheduled_signals(for_date=None):
 
 
 def eligible_signals_for_user(user, for_date=None):
-    signals = Signal.objects.filter(signal_date=for_date or kenya_today(), status=Signal.Status.PUBLISHED).order_by("scheduled_at")
-    membership = membership_for_user(user)
-    if membership.membership_type == Membership.MembershipType.REGULAR:
-        signals = signals.exclude(slot=Signal.Slot.AFTERNOON)
-    return signals
+    # Every user can see every published signal after it opens.  Eligibility is
+    # intentionally enforced only when a user attempts to trade it.
+    return Signal.objects.filter(
+        signal_date=for_date or kenya_today(), status=Signal.Status.PUBLISHED,
+        scheduled_at__lte=timezone.now(),
+    ).order_by("scheduled_at")
 
 
 @transaction.atomic
@@ -73,7 +75,7 @@ def mark_missed_signals(now=None):
         investments = Investment.objects.filter(status=Investment.Status.ACTIVE, start_date__lte=signal.scheduled_at, end_date__gt=signal.scheduled_at).select_related("user")
         for investment in investments:
             membership = membership_for_user(investment.user)
-            if membership.membership_type == Membership.MembershipType.REGULAR and signal.slot == Signal.Slot.AFTERNOON:
+            if membership.membership_type == Membership.MembershipType.REGULAR and signal.slot == Signal.Slot.EVENING:
                 continue
             _, created = EarningSession.objects.get_or_create(
                 investment=investment, signal=signal,
@@ -91,7 +93,7 @@ def settle_due_trades(now=None):
     """Credit the wallet once, five hours after a simulated signal trade was recorded."""
     now = now or timezone.now()
     settled = 0
-    for session in EarningSession.objects.select_for_update().filter(status=EarningSession.Status.TRADED, payout_due_at__lte=now).select_related("investment", "user", "signal"):
+    for session in EarningSession.objects.select_for_update().filter(status=EarningSession.Status.ACTIVE, payout_due_at__lte=now).select_related("investment", "user", "signal"):
         wallet = Wallet.objects.select_for_update().get(user=session.user)
         amount = session.earning_amount
         before = wallet.available_balance
@@ -129,18 +131,19 @@ def mature_due_investments():
 @transaction.atomic
 def participate_in_signal(*, user, investment_id, signal_id):
     now = timezone.now()
+    config = PlatformConfiguration.current()
     investment = Investment.objects.select_for_update().get(id=investment_id, user=user)
     signal = Signal.objects.select_for_update().get(id=signal_id)
     if investment.status != Investment.Status.ACTIVE or not investment.end_date or investment.end_date <= now:
         raise ValueError("This trade balance is not eligible for a signal.")
     if signal.status != Signal.Status.PUBLISHED or signal.scheduled_at > now:
         raise ValueError("This signal is not available yet.")
-    if now > signal.scheduled_at + SIGNAL_WINDOW:
+    if now > signal.scheduled_at + timedelta(minutes=config.signal_window_minutes):
         mark_missed_signals(now)
         raise ValueError("This signal expired after its 30-minute trade window.")
     membership = membership_for_user(user)
-    if membership.membership_type == Membership.MembershipType.REGULAR and signal.slot == Signal.Slot.AFTERNOON:
-        raise ValueError("The third signal is available to Team Leaders only.")
+    if membership.membership_type == Membership.MembershipType.REGULAR and signal.slot == Signal.Slot.EVENING:
+        raise ValueError("The 8:00 PM signal is available to Team Leaders only.")
     if SignalParticipation.objects.filter(user=user, investment=investment, signal=signal).exists():
         raise ValueError("This signal was already traded.")
     SignalParticipation.objects.create(user=user, investment=investment, signal=signal)
@@ -151,6 +154,6 @@ def participate_in_signal(*, user, investment_id, signal_id):
     session.display_asset, session.display_direction = signal.pair, signal.direction
     session.display_entry_price, session.display_take_profit, session.display_stop_loss = signal.entry_price, signal.take_profit, signal.stop_loss
     session.earning_rate, session.earning_amount = signal.profit_rate, amount
-    session.status, session.participated_at, session.payout_due_at = EarningSession.Status.TRADED, now, now + TRADE_SETTLEMENT_DELAY
+    session.status, session.participated_at, session.payout_due_at = EarningSession.Status.ACTIVE, now, now + timedelta(minutes=config.settlement_minutes)
     session.save()
     return amount, session.payout_due_at

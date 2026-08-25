@@ -6,5 +6,6 @@ app_name = "wallet"
 urlpatterns = [
     path("deposit/crypto/", views.deposit_crypto, name="deposit_crypto"),
     path("deposit/crypto/verify/", views.verify_transaction_hash, name="verify_transaction_hash"),
+    path("withdraw/", views.request_withdrawal, name="request_withdrawal"),
     path("webhooks/crypto/", views.crypto_webhook, name="crypto_webhook"),
 ]

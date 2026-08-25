@@ -10,6 +10,8 @@ class CustomUserAdmin(UserAdmin):
         "email",
         "username",
         "phone_number",
+        "account_id",
+        "withdrawal_network",
         "is_verified",
         "is_staff",
         "created_at",
@@ -30,6 +32,9 @@ class CustomUserAdmin(UserAdmin):
             {
                 "fields": (
                     "phone_number",
+                    "account_id",
+                    "withdrawal_address",
+                    "withdrawal_network",
                     "referral_code",
                     "referred_by",
                     "is_verified",
@@ -45,6 +50,8 @@ class CustomUserAdmin(UserAdmin):
                 "fields": (
                     "email",
                     "phone_number",
+                    "withdrawal_address",
+                    "withdrawal_network",
                     "referral_code",
                     "referred_by",
                     "is_verified",

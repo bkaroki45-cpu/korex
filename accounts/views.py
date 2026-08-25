@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.db import transaction
 
-from .forms import EmailAuthenticationForm, SignUpForm
+from .forms import EmailAuthenticationForm, SignUpForm, WithdrawalDetailsForm
 
 
 def signup(request):
@@ -42,3 +42,12 @@ def logout_view(request):
     if request.method == "POST":
         logout(request)
     return redirect("login")
+
+
+@login_required
+def account_settings(request):
+    form = WithdrawalDetailsForm(request.POST or None, instance=request.user)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        return redirect("account_settings")
+    return render(request, "accounts/settings.html", {"form": form})

@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import os
+from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -10,31 +11,51 @@ from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .models import CryptoDeposit
-from .services import CRYPTO_PROVIDER_MODE, MINIMUM_USDT_DEPOSIT, get_deposit_address, record_provider_deposit, submit_transaction_hash
+from .models import CryptoDeposit, PlatformConfiguration, WithdrawalRequest
+from .services import CRYPTO_PROVIDER_MODE, get_deposit_address, record_provider_deposit, submit_manual_deposit
 
 
 @login_required
 def deposit_crypto(request):
-    address = get_deposit_address(request.user)
+    config = PlatformConfiguration.current()
+    address = get_deposit_address(request.user, config.deposit_asset, config.deposit_network)
     deposits = CryptoDeposit.objects.filter(user=request.user).select_related("deposit_address")[:15]
-    return render(request, "wallet/deposit_crypto.html", {"address": address, "deposits": deposits, "minimum_deposit": MINIMUM_USDT_DEPOSIT, "mock_mode": CRYPTO_PROVIDER_MODE == "mock"})
+    return render(request, "wallet/deposit_crypto.html", {"address": address, "config": config, "deposits": deposits, "minimum_deposit": config.minimum_deposit, "mock_mode": False})
 
 
 @login_required
 @require_POST
 def verify_transaction_hash(request):
     txid = request.POST.get("transaction_hash", "").strip()
-    if len(txid) < 20:
-        messages.error(request, "Enter a valid transaction hash.")
+    proof = request.FILES.get("proof")
+    if proof and (proof.size > 5 * 1024 * 1024 or not proof.content_type.startswith("image/")):
+        messages.error(request, "Proof must be an image smaller than 5 MB.")
+        return redirect("wallet:deposit_crypto")
+    try:
+        submit_manual_deposit(user=request.user, amount=request.POST.get("amount", ""), transaction_hash=txid, proof=proof)
+    except (ValueError, TypeError) as error:
+        messages.error(request, str(error) or "Enter a valid deposit amount.")
     else:
-        try:
-            deposit = submit_transaction_hash(user=request.user, transaction_hash=txid)
-        except ValueError as error:
-            messages.error(request, str(error))
-        else:
-            messages.info(request, f"Transaction submitted for verification. Status: {deposit.get_status_display()}.")
+        messages.success(request, "Deposit submitted successfully. Status: Pending Verification.")
     return redirect("wallet:deposit_crypto")
+
+
+@login_required
+@require_POST
+def request_withdrawal(request):
+    try:
+        amount = Decimal(request.POST.get("amount", "")).quantize(Decimal("0.01"))
+    except Exception:
+        messages.error(request, "Enter a valid withdrawal amount.")
+        return redirect("dashboard")
+    if amount <= 0 or amount > request.user.wallet.available_balance:
+        messages.error(request, "Amount exceeds your available balance.")
+    elif not request.user.withdrawal_address or not request.user.withdrawal_network:
+        messages.error(request, "Add your withdrawal address and network in account settings first.")
+    else:
+        WithdrawalRequest.objects.create(user=request.user, amount=amount, address=request.user.withdrawal_address, network=request.user.withdrawal_network)
+        messages.success(request, "Withdrawal request submitted for manual processing.")
+    return redirect("dashboard")
 
 
 @csrf_exempt

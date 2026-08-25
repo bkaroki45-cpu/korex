@@ -51,6 +51,30 @@ class Wallet(models.Model):
         return self.available_balance + self.locked_balance
 
 
+class WithdrawalNetwork(models.Model):
+    code = models.CharField(max_length=32, unique=True)
+    name = models.CharField(max_length=64)
+    is_enabled = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.name
+
+
+class PlatformConfiguration(models.Model):
+    minimum_deposit = models.DecimalField(max_digits=20, decimal_places=2, default=Decimal("500.00"))
+    deposit_asset = models.CharField(max_length=12, default="USDT")
+    deposit_network = models.CharField(max_length=32, default="TRC20")
+    deposit_address = models.CharField(max_length=255, default="TLsHkop8XAc5dafJUAEEaQ9MMBNptnr1Vf")
+    principal_lock_days = models.PositiveIntegerField(default=39)
+    signal_window_minutes = models.PositiveIntegerField(default=15)
+    settlement_minutes = models.PositiveIntegerField(default=45)
+    team_leader_requirement = models.PositiveIntegerField(default=5)
+
+    @classmethod
+    def current(cls):
+        return cls.objects.get_or_create(pk=1)[0]
+
+
 class DepositAddress(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="deposit_addresses")
     asset = models.CharField(max_length=12, default="USDT")
@@ -68,7 +92,8 @@ class CryptoDeposit(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
         CONFIRMING = "CONFIRMING", "Confirming"
-        CONFIRMED = "CONFIRMED", "Confirmed"
+        COMPLETED = "COMPLETED", "Completed"
+        CONFIRMED = "CONFIRMED", "Confirmed"  # legacy provider state
         FAILED = "FAILED", "Failed"
         REJECTED = "REJECTED", "Rejected"
 
@@ -81,6 +106,10 @@ class CryptoDeposit(models.Model):
     provider_reference = models.CharField(max_length=128, unique=True, null=True, blank=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
     verification_note = models.TextField(blank=True)
+    receiving_address = models.CharField(max_length=255, blank=True)
+    proof = models.FileField(upload_to="deposit_proofs/", blank=True, null=True)
+    approved_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="approved_deposits")
+    approved_at = models.DateTimeField(null=True, blank=True)
     credited_at = models.DateTimeField(null=True, blank=True)
     confirmed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -88,6 +117,23 @@ class CryptoDeposit(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class WithdrawalRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        COMPLETED = "COMPLETED", "Completed"
+        REJECTED = "REJECTED", "Rejected"
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="withdrawal_requests")
+    amount = models.DecimalField(max_digits=20, decimal_places=2)
+    asset = models.CharField(max_length=12, default="USDT")
+    address = models.CharField(max_length=255)
+    network = models.CharField(max_length=32)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    completed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="completed_withdrawals")
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class OnRampOrder(models.Model):

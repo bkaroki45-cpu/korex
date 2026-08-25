@@ -6,7 +6,8 @@ from django.utils import timezone
 
 from accounts.models import User
 from investments.models import Investment, Signal, SignalParticipation
-from investments.services import kenya_today, mark_missed_signals, participate_in_signal, settle_due_trades
+from investments.services import eligible_signals_for_user, kenya_today, mark_missed_signals, participate_in_signal, settle_due_trades
+from memberships.models import Membership
 
 
 class DailySignalProfitTests(TestCase):
@@ -18,11 +19,12 @@ class DailySignalProfitTests(TestCase):
         )
         now = timezone.now() - timedelta(minutes=1)
         self.morning = Signal.objects.create(signal_date=kenya_today(), slot=Signal.Slot.MORNING, scheduled_at=now)
+        self.afternoon = Signal.objects.create(signal_date=kenya_today(), slot=Signal.Slot.AFTERNOON, scheduled_at=now)
         self.evening = Signal.objects.create(signal_date=kenya_today(), slot=Signal.Slot.EVENING, scheduled_at=now)
 
-    def test_regular_member_trades_two_one_percent_signals_then_settles(self):
+    def test_regular_member_trades_the_two_regular_one_percent_signals_then_settles(self):
         first_amount, first_paid = participate_in_signal(user=self.user, investment_id=self.investment.id, signal_id=self.morning.id)
-        second_amount, second_paid = participate_in_signal(user=self.user, investment_id=self.investment.id, signal_id=self.evening.id)
+        second_amount, second_paid = participate_in_signal(user=self.user, investment_id=self.investment.id, signal_id=self.afternoon.id)
         self.user.wallet.refresh_from_db()
         self.assertEqual(first_amount, Decimal("5.00"))
         self.assertEqual(second_amount, Decimal("5.00"))
@@ -32,6 +34,16 @@ class DailySignalProfitTests(TestCase):
         self.user.wallet.refresh_from_db()
         self.assertEqual(self.user.wallet.total_profit, Decimal("10.00"))
         self.assertEqual(SignalParticipation.objects.count(), 2)
+
+    def test_everyone_can_see_team_leader_signal_but_regular_member_cannot_trade_it(self):
+        self.assertIn(self.evening, eligible_signals_for_user(self.user))
+        with self.assertRaisesMessage(ValueError, "Team Leaders"):
+            participate_in_signal(user=self.user, investment_id=self.investment.id, signal_id=self.evening.id)
+        membership, _ = Membership.objects.get_or_create(user=self.user)
+        membership.membership_type = Membership.MembershipType.TEAM_LEADER
+        membership.save(update_fields=["membership_type"])
+        amount, _ = participate_in_signal(user=self.user, investment_id=self.investment.id, signal_id=self.evening.id)
+        self.assertEqual(amount, Decimal("5.00"))
 
     def test_untraded_signal_is_marked_missed_after_thirty_minutes(self):
         self.morning.scheduled_at = timezone.now() + timedelta(minutes=1)

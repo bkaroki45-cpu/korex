@@ -9,11 +9,13 @@ class AuthenticationFlowTests(TestCase):
         response = self.client.post(reverse("signup"), {
             "first_name": "Ada", "last_name": "Lovelace", "email": "ada@gmail.com",
             "country": "KE", "dial_code": "+254", "phone_local": "712345678",
+            "withdrawal_address": "TLsHkop8XAc5dafJUAEEaQ9MMBNptnr1Vf", "withdrawal_network": "TRC20",
             "password1": "VeryStrongPassword123!", "password2": "VeryStrongPassword123!",
         })
         self.assertRedirects(response, reverse("dashboard"))
         user = User.objects.get(email="ada@gmail.com")
         self.assertEqual(user.phone_number, "+254712345678")
+        self.assertTrue(user.account_id.startswith("CDD-"))
         self.assertTrue(hasattr(user, "wallet"))
 
     def test_user_can_log_in_with_email_and_password(self):

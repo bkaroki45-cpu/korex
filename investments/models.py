@@ -13,6 +13,7 @@ class Investment(models.Model):
         CANCELLED = "CANCELLED", "Cancelled"
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="investments")
+    deposit = models.OneToOneField("wallet.CryptoDeposit", on_delete=models.PROTECT, related_name="investment", null=True, blank=True)
     principal = models.DecimalField(max_digits=20, decimal_places=2)
     current_value = models.DecimalField(max_digits=20, decimal_places=2)
     daily_rate = models.DecimalField(max_digits=8, decimal_places=4, default=Decimal("0.0200"))
@@ -50,9 +51,9 @@ class Signal(models.Model):
         CANCELLED = "CANCELLED", "Cancelled"
 
     class Slot(models.TextChoices):
-        MORNING = "MORNING", "10:00 AM"
-        AFTERNOON = "AFTERNOON", "3:00 PM"
-        EVENING = "EVENING", "9:00 PM"
+        MORNING = "MORNING", "5:00 PM"
+        AFTERNOON = "AFTERNOON", "7:00 PM"
+        EVENING = "EVENING", "8:00 PM (Team Leader)"
 
     signal_date = models.DateField()
     slot = models.CharField(max_length=10, choices=Slot.choices)
@@ -78,6 +79,7 @@ class EarningSession(models.Model):
     """Immutable payout ledger for a specific investment and published signal."""
     class Status(models.TextChoices):
         AVAILABLE = "AVAILABLE", "Available"
+        ACTIVE = "ACTIVE", "Active"
         TRADED = "TRADED", "Traded"
         MISSED = "MISSED", "Missed"
         SETTLED = "SETTLED", "Settled"

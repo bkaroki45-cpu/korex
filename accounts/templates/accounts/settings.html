@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Account Settings — CLOUDD 1{% endblock %}
+{% block page_title %}Account Settings{% endblock %}
+{% block content %}
+<section class="dashboard-panel" style="max-width:600px"><h1>Account settings</h1><p>CloudD 1 Account ID: <strong>{{ request.user.account_id }}</strong></p><form method="post">{% csrf_token %}{% for field in form %}<p><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</p>{% endfor %}<button type="submit">Save withdrawal details</button></form></section>
+{% endblock %}

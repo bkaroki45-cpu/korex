@@ -1,16 +1,17 @@
 import os
 import secrets
+from datetime import timedelta
 from decimal import Decimal
 
 from django.db import transaction
 from django.utils import timezone
 
 from transactions.models import Transaction
-from .models import CryptoDeposit, DepositAddress, OnRampOrder, Wallet
+from .models import CryptoDeposit, DepositAddress, OnRampOrder, PlatformConfiguration, Wallet, WithdrawalRequest
 
 CRYPTO_PROVIDER_MODE = os.getenv("CRYPTO_PROVIDER_MODE", "mock").lower()
 CRYPTO_PROVIDER_NAME = os.getenv("CRYPTO_PROVIDER_NAME", "unconfigured")
-MINIMUM_USDT_DEPOSIT = Decimal(os.getenv("MINIMUM_USDT_DEPOSIT", "10"))
+MINIMUM_USDT_DEPOSIT = Decimal(os.getenv("MINIMUM_USDT_DEPOSIT", "500"))
 
 
 class MockCustodyProvider:
@@ -48,6 +49,74 @@ def submit_transaction_hash(*, user, transaction_hash):
     deposit.status, deposit.verification_note = result["status"], result["note"]
     deposit.save(update_fields=["status", "verification_note", "updated_at"])
     return deposit
+
+
+@transaction.atomic
+def submit_manual_deposit(*, user, amount, transaction_hash, proof=None):
+    config = PlatformConfiguration.current()
+    amount = Decimal(str(amount)).quantize(Decimal("0.01"))
+    if amount < config.minimum_deposit:
+        raise ValueError(f"The minimum deposit is ${config.minimum_deposit}.")
+    if len(transaction_hash.strip()) < 20:
+        raise ValueError("Enter a valid transaction ID.")
+    if CryptoDeposit.objects.filter(transaction_hash=transaction_hash.strip()).exists():
+        raise ValueError("This transaction ID has already been submitted.")
+    # Retain the existing address record for compatibility; the configured receiving address is immutable on the deposit.
+    address = get_deposit_address(user, config.deposit_asset, config.deposit_network)
+    return CryptoDeposit.objects.create(user=user, deposit_address=address, asset=config.deposit_asset,
+        network=config.deposit_network, amount=amount, transaction_hash=transaction_hash.strip(), proof=proof,
+        receiving_address=config.deposit_address, status=CryptoDeposit.Status.PENDING)
+
+
+@transaction.atomic
+def approve_manual_deposit(*, deposit_id, admin_user):
+    """The sole credit/activation path for a manually verified deposit."""
+    deposit = CryptoDeposit.objects.select_for_update().select_related("user").get(pk=deposit_id)
+    config = PlatformConfiguration.current()
+    if deposit.status != CryptoDeposit.Status.PENDING:
+        raise ValueError("This deposit was already processed.")
+    if not deposit.amount or deposit.amount < config.minimum_deposit:
+        raise ValueError("This deposit does not meet the qualifying minimum.")
+    from investments.models import Investment
+    from referrals.services import grant_deposit_rewards, refresh_referrer_status
+    wallet = Wallet.objects.select_for_update().get(user=deposit.user)
+    now = timezone.now()
+    deposit.status, deposit.approved_by, deposit.approved_at, deposit.confirmed_at = CryptoDeposit.Status.COMPLETED, admin_user, now, now
+    deposit.save(update_fields=["status", "approved_by", "approved_at", "confirmed_at", "updated_at"])
+    wallet.locked_balance += deposit.amount
+    wallet.total_deposited += deposit.amount
+    wallet.save(update_fields=["locked_balance", "total_deposited", "updated_at"])
+    investment = Investment.objects.create(user=deposit.user, deposit=deposit, principal=deposit.amount, current_value=deposit.amount,
+        daily_rate=Decimal("0.0100"), duration_days=config.principal_lock_days, end_date=now + timedelta(days=config.principal_lock_days), status=Investment.Status.ACTIVE)
+    Transaction.objects.create(user=deposit.user, transaction_type=Transaction.TransactionType.DEPOSIT, amount=deposit.amount,
+        balance_before=wallet.available_balance, balance_after=wallet.available_balance, reference=f"MANUAL-DEPOSIT-{deposit.id}",
+        description=f"Approved {deposit.asset} {deposit.network} deposit; principal locked", status=Transaction.Status.COMPLETED, completed_at=now)
+    grant_deposit_rewards(deposit=deposit)
+    try:
+        refresh_referrer_status(deposit.user.received_referral.referrer)
+    except Exception:
+        pass
+    return investment
+
+
+@transaction.atomic
+def complete_withdrawal(*, withdrawal_id, admin_user):
+    withdrawal = WithdrawalRequest.objects.select_for_update().select_related("user").get(pk=withdrawal_id)
+    if withdrawal.status != WithdrawalRequest.Status.PENDING:
+        raise ValueError("This withdrawal was already processed.")
+    wallet = Wallet.objects.select_for_update().get(user=withdrawal.user)
+    if withdrawal.amount > wallet.available_balance:
+        raise ValueError("Insufficient available balance.")
+    before = wallet.available_balance
+    wallet.available_balance -= withdrawal.amount
+    wallet.total_withdrawn += withdrawal.amount
+    wallet.save(update_fields=["available_balance", "total_withdrawn", "updated_at"])
+    now = timezone.now()
+    withdrawal.status, withdrawal.completed_by, withdrawal.completed_at = WithdrawalRequest.Status.COMPLETED, admin_user, now
+    withdrawal.save(update_fields=["status", "completed_by", "completed_at"])
+    Transaction.objects.create(user=withdrawal.user, transaction_type=Transaction.TransactionType.WITHDRAWAL, amount=withdrawal.amount,
+        balance_before=before, balance_after=wallet.available_balance, reference=f"WITHDRAWAL-{withdrawal.id}", description="Manually completed withdrawal", status=Transaction.Status.COMPLETED, completed_at=now)
+    return withdrawal
 
 
 @transaction.atomic
