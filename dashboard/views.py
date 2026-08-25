@@ -31,6 +31,7 @@ def dashboard(request):
         "completed_today": request.user.earning_sessions.filter(session_date=today, status="SETTLED").count(),
         "news": get_market_news() or [],
         "deposit_config": PlatformConfiguration.current(),
+        "withdrawal_details_complete": bool(request.user.withdrawal_address and request.user.withdrawal_network),
     })
 
 

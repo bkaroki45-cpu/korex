@@ -9,7 +9,6 @@ class AuthenticationFlowTests(TestCase):
         response = self.client.post(reverse("signup"), {
             "first_name": "Ada", "last_name": "Lovelace", "email": "ada@gmail.com",
             "country": "KE", "dial_code": "+254", "phone_local": "712345678",
-            "withdrawal_address": "TLsHkop8XAc5dafJUAEEaQ9MMBNptnr1Vf", "withdrawal_network": "TRC20",
             "password1": "VeryStrongPassword123!", "password2": "VeryStrongPassword123!",
         })
         self.assertRedirects(response, reverse("dashboard"))
