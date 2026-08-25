@@ -64,9 +64,10 @@ def create_scheduled_signals(for_date=None):
 def eligible_signals_for_user(user, for_date=None):
     # Every user can see every published signal after it opens.  Eligibility is
     # intentionally enforced only when a user attempts to trade it.
+    now = timezone.now()
     return Signal.objects.filter(
         signal_date=for_date or kenya_today(), status=Signal.Status.PUBLISHED,
-        scheduled_at__lte=timezone.now(),
+        scheduled_at__lte=now, scheduled_at__gt=now - SIGNAL_WINDOW,
     ).order_by("scheduled_at")
 
 

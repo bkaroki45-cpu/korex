@@ -7,11 +7,13 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, JsonResponse
+from django.db import transaction
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .models import CryptoDeposit, PlatformConfiguration, WithdrawalRequest
+from .models import CryptoDeposit, PlatformConfiguration, WithdrawalRequest, Wallet
+from transactions.models import Transaction
 from .services import CRYPTO_PROVIDER_MODE, get_deposit_address, record_provider_deposit, submit_manual_deposit
 from accounts.kyc import is_kyc_verified
 
@@ -42,24 +44,34 @@ def verify_transaction_hash(request):
 
 
 @login_required
-@require_POST
 def request_withdrawal(request):
     if not is_kyc_verified(request.user):
         messages.error(request, "Identity verification required. Please complete KYC verification before making a withdrawal.")
         return redirect("kyc")
+    if request.method == "GET":
+        return render(request, "wallet/withdraw.html", {"wallet": request.user.wallet, "requests": request.user.withdrawal_requests.order_by("-created_at")[:10]})
     try:
         amount = Decimal(request.POST.get("amount", "")).quantize(Decimal("0.01"))
     except Exception:
         messages.error(request, "Enter a valid withdrawal amount.")
-        return redirect("dashboard")
+        return redirect("wallet:request_withdrawal")
     if amount <= 0 or amount > request.user.wallet.available_balance:
-        messages.error(request, "Amount exceeds your available balance.")
+        messages.error(request, "Amount exceeds your withdrawable balance.")
     elif not request.user.withdrawal_address or not request.user.withdrawal_network:
         messages.error(request, "Add your withdrawal address and network in account settings first.")
     else:
-        WithdrawalRequest.objects.create(user=request.user, amount=amount, address=request.user.withdrawal_address, network=request.user.withdrawal_network)
-        messages.success(request, "Withdrawal request submitted for manual processing.")
-    return redirect("dashboard")
+        with transaction.atomic():
+            wallet = Wallet.objects.select_for_update().get(user=request.user)
+            if amount > wallet.available_balance:
+                messages.error(request, "Amount exceeds your withdrawable balance.")
+                return redirect("wallet:request_withdrawal")
+            before = wallet.available_balance
+            wallet.available_balance -= amount
+            wallet.save(update_fields=["available_balance", "updated_at"])
+            withdrawal = WithdrawalRequest.objects.create(user=request.user, amount=amount, address=request.user.withdrawal_address, network=request.user.withdrawal_network)
+            Transaction.objects.create(user=request.user, transaction_type=Transaction.TransactionType.WITHDRAWAL, amount=amount, balance_before=before, balance_after=wallet.available_balance, reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}", description="Withdrawal amount reserved for manual processing", status=Transaction.Status.PENDING)
+        messages.success(request, "Withdrawal request submitted. The amount is reserved from your withdrawable balance while it is reviewed.")
+    return redirect("wallet:request_withdrawal")
 
 
 @csrf_exempt

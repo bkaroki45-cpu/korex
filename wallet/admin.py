@@ -63,6 +63,7 @@ class WalletAdmin(admin.ModelAdmin):
     readonly_fields = (
         "updated_at",
     )
+    fields = ("user", "available_balance", "locked_balance", "total_profit", "total_deposited", "total_withdrawn", "updated_at")
     list_select_related = ("user",)
 
 @admin.register(WithdrawalNetwork)
@@ -90,4 +91,14 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
             try: complete_withdrawal(withdrawal_id=withdrawal.id, admin_user=request.user)
             except ValueError: pass
     @admin.action(description="Reject selected pending withdrawals")
-    def reject_requests(self, request, queryset): queryset.filter(status=WithdrawalRequest.Status.PENDING).update(status=WithdrawalRequest.Status.REJECTED)
+    def reject_requests(self, request, queryset):
+        from django.db import transaction
+        for withdrawal in queryset.filter(status=WithdrawalRequest.Status.PENDING):
+            with transaction.atomic():
+                wallet = Wallet.objects.select_for_update().get(user=withdrawal.user)
+                wallet.available_balance += withdrawal.amount
+                wallet.save(update_fields=["available_balance", "updated_at"])
+                withdrawal.status = WithdrawalRequest.Status.REJECTED
+                withdrawal.save(update_fields=["status"])
+                from transactions.models import Transaction
+                Transaction.objects.filter(reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}").update(status=Transaction.Status.CANCELLED, description="Withdrawal request rejected; amount restored to wallet")

@@ -28,12 +28,15 @@ def investments(request):
     participation_ids = set(SignalParticipation.objects.filter(user=request.user, signal__in=signals).values_list("signal_id", flat=True))
     missed_signal_ids = set(EarningSession.objects.filter(user=request.user, signal__in=signals, status=EarningSession.Status.MISSED).values_list("signal_id", flat=True))
     paid_ids = set(user_investments.filter(earning_sessions__session_date=today, earning_sessions__status="ACTIVE").values_list("id", flat=True))
+    trade_history = request.user.earning_sessions.select_related("signal").order_by("-created_at")
     return render(request, "investments/investments.html", {
         "investments": user_investments, "signals": signals, "active_investments": active_investments,
         "participation_ids": participation_ids, "missed_signal_ids": missed_signal_ids, "paid_ids": paid_ids, "today": today,
         "is_team_leader": membership_for_user(request.user).membership_type == "TEAM_LEADER",
         "kyc_verified": is_kyc_verified(request.user),
-        "trade_history": request.user.earning_sessions.select_related("signal").order_by("-created_at")[:12],
+        "trade_history": trade_history,
+        "traded_count": trade_history.filter(status__in=[EarningSession.Status.ACTIVE, EarningSession.Status.SETTLED]).count(),
+        "missed_count": trade_history.filter(status=EarningSession.Status.MISSED).count(),
     })
 
 

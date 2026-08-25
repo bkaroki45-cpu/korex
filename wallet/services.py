@@ -105,17 +105,12 @@ def complete_withdrawal(*, withdrawal_id, admin_user):
     if withdrawal.status != WithdrawalRequest.Status.PENDING:
         raise ValueError("This withdrawal was already processed.")
     wallet = Wallet.objects.select_for_update().get(user=withdrawal.user)
-    if withdrawal.amount > wallet.available_balance:
-        raise ValueError("Insufficient available balance.")
-    before = wallet.available_balance
-    wallet.available_balance -= withdrawal.amount
     wallet.total_withdrawn += withdrawal.amount
-    wallet.save(update_fields=["available_balance", "total_withdrawn", "updated_at"])
+    wallet.save(update_fields=["total_withdrawn", "updated_at"])
     now = timezone.now()
     withdrawal.status, withdrawal.completed_by, withdrawal.completed_at = WithdrawalRequest.Status.COMPLETED, admin_user, now
     withdrawal.save(update_fields=["status", "completed_by", "completed_at"])
-    Transaction.objects.create(user=withdrawal.user, transaction_type=Transaction.TransactionType.WITHDRAWAL, amount=withdrawal.amount,
-        balance_before=before, balance_after=wallet.available_balance, reference=f"WITHDRAWAL-{withdrawal.id}", description="Manually completed withdrawal", status=Transaction.Status.COMPLETED, completed_at=now)
+    Transaction.objects.filter(reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}").update(status=Transaction.Status.COMPLETED, completed_at=now, description="Manually completed withdrawal")
     return withdrawal
 
 
