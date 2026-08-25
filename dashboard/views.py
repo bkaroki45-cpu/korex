@@ -18,6 +18,7 @@ def dashboard(request):
     today = kenya_today()
     create_scheduled_signals(today)
     investments = Investment.objects.filter(user=request.user).order_by("-start_date")
+    active_investment = investments.filter(status=Investment.Status.ACTIVE, end_date__gt=timezone.now()).first()
     referral_profile, _ = ReferralProfile.objects.get_or_create(
         user=request.user,
         defaults={"referral_code": new_referral_code()},
@@ -27,7 +28,8 @@ def dashboard(request):
         # This is the same wallet field enforced by the withdrawal service.
         # It includes settled signal profits, referral rewards and released principal.
         "withdrawable_balance": request.user.wallet.available_balance,
-        "active_investment": investments.filter(status=Investment.Status.ACTIVE).first(),
+        "active_investment": active_investment,
+        "unlock_remaining_seconds": max(0, int((active_investment.end_date - timezone.now()).total_seconds())) if active_investment else 0,
         "signals": Signal.objects.filter(signal_date=today, status=Signal.Status.PUBLISHED, scheduled_at__lte=timezone.now()).order_by("scheduled_at"),
         "transactions": Transaction.objects.filter(user=request.user).order_by("-created_at")[:5],
         "completed_today": request.user.earning_sessions.filter(session_date=today, status="SETTLED").count(),
