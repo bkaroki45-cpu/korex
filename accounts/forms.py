@@ -41,7 +41,7 @@ class SignUpForm(UserCreationForm):
         if self.initial.get("referrer_code"):
             self.fields["referrer_code"].initial = self.initial["referrer_code"]
             self.fields["referrer_code"].disabled = True
-            self.fields["referrer_code"].help_text = "Applied from your invitation link."
+            self.fields["referrer_code"].help_text = "Applied automatically from a CLOUDD 1 referral link."
         else:
             self.fields.pop("referrer_code")
         self.fields["password1"].widget.attrs["autocomplete"] = "new-password"

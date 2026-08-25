@@ -29,7 +29,7 @@ def referrals_earnings(request):
 
 
 def join_referral(request, code):
-    """Always start a fresh registration session for a valid invitation."""
+    """Start a fresh CLOUDD 1 registration with a referral code applied."""
     normalized_code = code.strip().upper()
     if not ReferralProfile.objects.filter(referral_code=normalized_code).exists():
         return redirect("signup")
