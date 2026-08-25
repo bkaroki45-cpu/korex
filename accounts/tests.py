@@ -21,3 +21,21 @@ class AuthenticationFlowTests(TestCase):
         User.objects.create_user(username="ada@gmail.com", email="ada@gmail.com", password="VeryStrongPassword123!")
         response = self.client.post(reverse("login"), {"username": "ada@gmail.com", "password": "VeryStrongPassword123!"})
         self.assertRedirects(response, reverse("dashboard"))
+
+    def test_multiple_people_can_register_with_different_email_addresses(self):
+        for first_name, email in (("Ada", "ada@example.com"), ("Grace", "grace@example.com")):
+            response = self.client.post(reverse("signup"), {
+                "first_name": first_name, "last_name": "Member", "email": email,
+                "country": "KE", "dial_code": "+254", "phone_local": "712345678",
+                "password1": "VeryStrongPassword123!", "password2": "VeryStrongPassword123!",
+            })
+            self.assertRedirects(response, reverse("dashboard"))
+            self.client.post(reverse("logout"))
+        self.assertEqual(User.objects.filter(email__in=["ada@example.com", "grace@example.com"]).count(), 2)
+
+    def test_logout_ends_the_authenticated_session(self):
+        user = User.objects.create_user(username="member@example.com", email="member@example.com", password="VeryStrongPassword123!")
+        self.client.force_login(user)
+        response = self.client.post(reverse("logout"))
+        self.assertRedirects(response, reverse("login"))
+        self.assertNotIn("_auth_user_id", self.client.session)

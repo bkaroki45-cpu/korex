@@ -23,11 +23,11 @@ class SignUpForm(UserCreationForm):
     dial_code = forms.ChoiceField(choices=DIAL_CODES, label="Dial code")
     phone_local = forms.CharField(max_length=16, label="Phone number")
     country = forms.ChoiceField(choices=COUNTRIES)
-    referral_code = forms.CharField(max_length=20, required=False, label="Referral code (optional)")
+    referrer_code = forms.CharField(max_length=20, required=False, label="Referral code (optional)")
 
     class Meta:
         model = User
-        fields = ("first_name", "last_name", "email", "country", "dial_code", "phone_local", "referral_code", "password1", "password2")
+        fields = ("first_name", "last_name", "email", "country", "dial_code", "phone_local", "referrer_code", "password1", "password2")
         labels = {"first_name": "First name", "last_name": "Last name", "email": "Email address"}
 
     def __init__(self, *args, **kwargs):
@@ -38,8 +38,8 @@ class SignUpForm(UserCreationForm):
         self.fields["last_name"].widget.attrs.update({"autocomplete": "family-name", "placeholder": "Last name"})
         self.fields["email"].widget.attrs.update({"autocomplete": "email", "placeholder": "you@example.com"})
         self.fields["phone_local"].widget.attrs.update({"autocomplete": "tel-national", "inputmode": "tel", "placeholder": "712 345 678"})
-        if self.initial.get("referral_code"):
-            self.fields["referral_code"].initial = self.initial["referral_code"]
+        if self.initial.get("referrer_code"):
+            self.fields["referrer_code"].initial = self.initial["referrer_code"]
         self.fields["password1"].widget.attrs["autocomplete"] = "new-password"
         self.fields["password2"].widget.attrs["autocomplete"] = "new-password"
         self.fields["password1"].help_text = "Use at least 8 characters and avoid a common password."
@@ -54,8 +54,8 @@ class SignUpForm(UserCreationForm):
             raise forms.ValidationError("Enter a valid phone number.")
         return value
 
-    def clean_referral_code(self):
-        return self.cleaned_data["referral_code"].strip().upper()
+    def clean_referrer_code(self):
+        return self.cleaned_data["referrer_code"].strip().upper()
 
     def save(self, commit=True):
         user = super().save(commit=False)

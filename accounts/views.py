@@ -9,17 +9,17 @@ from .forms import EmailAuthenticationForm, SignUpForm, WithdrawalDetailsForm
 def signup(request):
     if request.user.is_authenticated:
         return redirect("dashboard")
-    form = SignUpForm(request.POST or None, initial={"referral_code": request.GET.get("ref", "")})
+    form = SignUpForm(request.POST or None, initial={"referrer_code": request.GET.get("ref", "")})
     if request.method == "POST" and form.is_valid():
         with transaction.atomic():
             user = form.save()
-            referral_code = form.cleaned_data["referral_code"]
+            referral_code = form.cleaned_data["referrer_code"]
             if referral_code:
                 from referrals.services import create_referral
                 try:
                     create_referral(referred_user=user, referral_code=referral_code)
                 except ValueError as error:
-                    form.add_error("referral_code", error)
+                    form.add_error("referrer_code", error)
                     transaction.set_rollback(True)
                     return render(request, "accounts/signup.html", {"form": form})
         login(request, user)

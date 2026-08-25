@@ -8,6 +8,7 @@
     <link rel="icon" type="image/png" href="{% static 'images/cloudd1-mark.png' %}">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/mobile-nav.css' %}">
+    <link rel="stylesheet" href="{% static 'css/logout.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -19,6 +20,7 @@
                 <a href="{% url 'markets:markets' %}" class="nav-item {% if request.resolver_match.namespace == 'markets' %}active{% endif %}"><span class="nav-icon">↗</span><span>Markets</span></a>
                 <a href="{% url 'investments:investments' %}" class="nav-item {% if request.resolver_match.namespace == 'investments' %}active{% endif %}"><span class="nav-icon">◈</span><span>Copy Trading</span></a>
                 <a href="{% url 'referrals:overview' %}" class="nav-item {% if request.resolver_match.namespace == 'referrals' %}active{% endif %}"><span class="nav-icon">♙</span><span>Profile</span></a>
+                <form method="post" action="{% url 'logout' %}" class="mobile-logout-form">{% csrf_token %}<button type="submit" class="nav-item mobile-logout"><span class="nav-icon">↪</span><span>Logout</span></button></form>
             </nav>
             <div class="sidebar-bottom"><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="nav-item logout"><span class="nav-icon">↪</span><span>Logout</span></button></form></div>
         </aside>
@@ -27,6 +29,7 @@
                 <button class="menu-button" onclick="toggleSidebar()" aria-label="Toggle navigation">☰</button>
                 <div class="page-title">{% block page_title %}Dashboard{% endblock %}</div>
                 <div class="topbar-right"><button class="notification-button" aria-label="Notifications">●<span class="notification-dot"></span></button><div class="user-mini"><div class="user-avatar">{{ request.user.first_name|default:request.user.email|first|upper }}</div><div class="user-info"><strong>{{ request.user.first_name|default:request.user.email }}</strong><small>Member</small></div></div></div>
+                <form method="post" action="{% url 'logout' %}" class="desktop-logout-form">{% csrf_token %}<button type="submit" class="desktop-logout">Logout</button></form>
             </header>
             <section class="page-content">
                 {% if messages %}<div class="app-messages">{% for message in messages %}<div class="app-message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}
