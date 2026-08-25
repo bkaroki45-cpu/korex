@@ -177,6 +177,9 @@ button {
     z-index: 50;
 }
 
+.topbar{background:linear-gradient(100deg,rgba(7,11,18,.97),rgba(12,27,45,.94));box-shadow:0 8px 24px rgba(0,0,0,.16);backdrop-filter:blur(14px)}
+.page-title{position:relative;padding-left:15px;font-family:Georgia,"Times New Roman",serif;font-size:20px;letter-spacing:-.35px}.page-title:before{content:"";position:absolute;left:0;top:50%;width:4px;height:23px;border-radius:3px;background:linear-gradient(#55e1c4,#348dff);transform:translateY(-50%);box-shadow:0 0 16px rgba(85,225,196,.6)}.notification-button{transition:transform .2s ease,border-color .2s ease,background .2s ease}.notification-button:hover{transform:translateY(-3px);border-color:rgba(91,227,194,.65);background:#15263a}.notification-dot{box-shadow:0 0 0 4px rgba(48,182,75,.12);animation:notification-pulse 2s infinite}.user-mini{padding:4px 8px 4px 4px;border:1px solid transparent;border-radius:999px;transition:.2s ease}.user-mini:hover{border-color:rgba(108,217,255,.3);background:rgba(255,255,255,.035)}.user-avatar{background:linear-gradient(145deg,rgba(60,205,125,.26),rgba(32,116,72,.25));box-shadow:inset 0 0 0 1px rgba(104,235,156,.14)}@keyframes notification-pulse{50%{box-shadow:0 0 0 7px rgba(48,182,75,0)}}
+
 .page-title {
     font-size: 18px;
     font-weight: 650;
