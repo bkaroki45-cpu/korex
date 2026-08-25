@@ -2,7 +2,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.utils import timezone
-from decimal import Decimal
 
 from investments.models import Investment, Signal
 from investments.services import create_scheduled_signals, kenya_today
@@ -25,7 +24,9 @@ def dashboard(request):
     )
     return render(request, "dashboard/dashboard.html", {
         "wallet": request.user.wallet,
-        "withdrawable_balance": wallet_withdrawable(request.user.wallet, referral_profile),
+        # This is the same wallet field enforced by the withdrawal service.
+        # It includes settled signal profits, referral rewards and released principal.
+        "withdrawable_balance": request.user.wallet.available_balance,
         "active_investment": investments.filter(status=Investment.Status.ACTIVE).first(),
         "signals": Signal.objects.filter(signal_date=today, status=Signal.Status.PUBLISHED, scheduled_at__lte=timezone.now()).order_by("scheduled_at"),
         "transactions": Transaction.objects.filter(user=request.user).order_by("-created_at")[:5],
@@ -35,10 +36,6 @@ def dashboard(request):
         "withdrawal_details_complete": bool(request.user.withdrawal_address and request.user.withdrawal_network),
         "kyc_verified": is_kyc_verified(request.user),
     })
-
-
-def wallet_withdrawable(wallet, referral_profile):
-    return wallet.total_profit + (referral_profile.referral_earnings or Decimal("0.00"))
 
 
 @login_required
