@@ -15,6 +15,8 @@ class AuthenticationFlowTests(TestCase):
         user = User.objects.get(email="ada@gmail.com")
         self.assertEqual(user.phone_number, "+254712345678")
         self.assertTrue(user.account_id.startswith("CDD-"))
+        self.assertTrue(user.referral_code)
+        self.assertEqual(user.referral_code, user.referral_profile.referral_code)
         self.assertTrue(hasattr(user, "wallet"))
 
     def test_user_can_log_in_with_email_and_password(self):

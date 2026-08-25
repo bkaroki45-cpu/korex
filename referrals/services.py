@@ -11,9 +11,10 @@ TEAM_LEADER_MIN_ACTIVE_REFERRALS = 5
 
 
 def new_referral_code():
+    from accounts.models import User
     while True:
         code = secrets.token_urlsafe(6).upper()
-        if not ReferralProfile.objects.filter(referral_code=code).exists():
+        if not ReferralProfile.objects.filter(referral_code=code).exists() and not User.objects.filter(referral_code=code).exists():
             return code
 
 

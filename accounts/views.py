@@ -13,7 +13,7 @@ def signup(request):
     if request.method == "POST" and form.is_valid():
         with transaction.atomic():
             user = form.save()
-            referral_code = form.cleaned_data["referrer_code"]
+            referral_code = form.cleaned_data.get("referrer_code", "")
             if referral_code:
                 from referrals.services import create_referral
                 try:

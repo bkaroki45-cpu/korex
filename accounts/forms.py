@@ -40,6 +40,10 @@ class SignUpForm(UserCreationForm):
         self.fields["phone_local"].widget.attrs.update({"autocomplete": "tel-national", "inputmode": "tel", "placeholder": "712 345 678"})
         if self.initial.get("referrer_code"):
             self.fields["referrer_code"].initial = self.initial["referrer_code"]
+            self.fields["referrer_code"].disabled = True
+            self.fields["referrer_code"].help_text = "Applied from your invitation link."
+        else:
+            self.fields.pop("referrer_code")
         self.fields["password1"].widget.attrs["autocomplete"] = "new-password"
         self.fields["password2"].widget.attrs["autocomplete"] = "new-password"
         self.fields["password1"].help_text = "Use at least 8 characters and avoid a common password."

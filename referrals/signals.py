@@ -11,4 +11,6 @@ from .services import new_referral_code
 def create_referral_profile(sender, instance, created, **kwargs):
 
     if created:
-        ReferralProfile.objects.create(user=instance, referral_code=new_referral_code())
+        code = new_referral_code()
+        User.objects.filter(pk=instance.pk).update(referral_code=code)
+        ReferralProfile.objects.create(user=instance, referral_code=code)
