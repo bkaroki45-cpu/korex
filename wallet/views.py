@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import json
 import os
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -33,7 +33,7 @@ def verify_transaction_hash(request):
         return redirect("wallet:deposit_crypto")
     try:
         submit_manual_deposit(user=request.user, amount=request.POST.get("amount", ""), transaction_hash=txid, proof=proof)
-    except (ValueError, TypeError) as error:
+    except (ValueError, TypeError, InvalidOperation) as error:
         messages.error(request, str(error) or "Enter a valid deposit amount.")
     else:
         messages.success(request, "Deposit submitted successfully. Status: Pending Verification.")

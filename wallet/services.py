@@ -56,7 +56,7 @@ def submit_manual_deposit(*, user, amount, transaction_hash, proof=None):
     config = PlatformConfiguration.current()
     amount = Decimal(str(amount)).quantize(Decimal("0.01"))
     if amount < config.minimum_deposit:
-        raise ValueError(f"The minimum deposit is ${config.minimum_deposit}.")
+        raise ValueError(f"Minimum deposit is ${config.minimum_deposit:.0f}.")
     if len(transaction_hash.strip()) < 20:
         raise ValueError("Enter a valid transaction ID.")
     if CryptoDeposit.objects.filter(transaction_hash=transaction_hash.strip()).exists():
