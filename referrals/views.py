@@ -1,3 +1,4 @@
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.shortcuts import redirect, render
@@ -28,8 +29,10 @@ def referrals_earnings(request):
 
 
 def join_referral(request, code):
-    """Validate a shared link before sending a visitor to registration."""
+    """Always start a fresh registration session for a valid invitation."""
     normalized_code = code.strip().upper()
     if not ReferralProfile.objects.filter(referral_code=normalized_code).exists():
         return redirect("signup")
+    if request.user.is_authenticated:
+        logout(request)
     return redirect(f"{reverse('signup')}?ref={normalized_code}")

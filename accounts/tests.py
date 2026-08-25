@@ -51,3 +51,15 @@ class AuthenticationFlowTests(TestCase):
         registration = self.client.get(response.url)
         self.assertContains(registration, 'name="referrer_code"')
         self.assertContains(registration, 'disabled')
+
+    def test_invitation_link_signs_out_an_existing_session_for_registration(self):
+        referrer = User.objects.create_user(username="referrer2@example.com", email="referrer2@example.com", password="StrongPassword123!")
+        visitor = User.objects.create_user(username="visitor@example.com", email="visitor@example.com", password="StrongPassword123!")
+        self.client.force_login(visitor)
+        code = ReferralProfile.objects.get(user=referrer).referral_code
+        response = self.client.get(reverse("referrals:join", kwargs={"code": code}))
+        self.assertRedirects(response, f"{reverse('signup')}?ref={code}")
+        self.assertNotIn("_auth_user_id", self.client.session)
+        registration = self.client.get(response.url)
+        self.assertContains(registration, 'name="referrer_code"')
+        self.assertContains(registration, 'disabled')
