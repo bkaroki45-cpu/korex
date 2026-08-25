@@ -33,6 +33,8 @@ STATUS_MAP = {
 
 
 def is_kyc_verified(user):
+    if not settings.KYC_ENFORCEMENT_ENABLED:
+        return True
     return bool(user.is_authenticated and KYCVerification.objects.filter(
         user=user, status=KYCVerification.Status.VERIFIED
     ).exists())
