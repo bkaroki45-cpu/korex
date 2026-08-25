@@ -11,7 +11,7 @@ from .models import Investment, Signal, SignalParticipation
 from .services import create_scheduled_signals, eligible_signals_for_user, kenya_today, mark_missed_signals, membership_for_user, participate_in_signal, settle_due_trades
 
 MINIMUM_INVESTMENT = Decimal("500.00")
-PLAN_DETAILS = {name: {"name": name.title(), "minimum": MINIMUM_INVESTMENT, "daily_rate": Decimal("0.0200"), "duration_days": 35}
+PLAN_DETAILS = {name: {"name": name.title(), "minimum": MINIMUM_INVESTMENT, "daily_rate": Decimal("0.0100"), "duration_days": 35}
                 for name in ("starter", "growth", "premium")}
 
 
@@ -59,7 +59,7 @@ def create_investment(request, plan):
             wallet.locked_balance += amount
             wallet.save(update_fields=["available_balance", "locked_balance", "updated_at"])
             Investment.objects.create(user=request.user, principal=amount, current_value=amount,
-                daily_rate=Decimal("0.0200"), duration_days=35,
+                daily_rate=Decimal("0.0100"), duration_days=35,
                 end_date=timezone.now() + timedelta(days=35), status=Investment.Status.ACTIVE)
             # A new active investment may qualify the referrer for Team Leader.
             try:

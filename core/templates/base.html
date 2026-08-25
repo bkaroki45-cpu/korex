@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CLOUDD 1{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{% static 'images/cloudd1-mark.png' %}">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/mobile-nav.css' %}">
     {% block extra_css %}{% endblock %}
@@ -12,7 +13,7 @@
 <body>
     <div class="app-shell">
         <aside class="sidebar" id="sidebar">
-            <a href="{% url 'dashboard' %}" class="brand"><span class="brand-logo">K</span><span class="brand-name">CLOUDD 1</span></a>
+            <a href="{% url 'dashboard' %}" class="brand"><img class="brand-logo" src="{% static 'images/cloudd1-mark.png' %}" alt="CLOUDD 1 logo"><span class="brand-name">CLOUDD 1</span></a>
             <nav class="sidebar-nav">
                 <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"><span class="nav-icon">⌂</span><span>Dashboard</span></a>
                 <a href="{% url 'markets:markets' %}" class="nav-item {% if request.resolver_match.namespace == 'markets' %}active{% endif %}"><span class="nav-icon">↗</span><span>Markets</span></a>

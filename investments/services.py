@@ -1,5 +1,6 @@
 from datetime import datetime, time, timedelta
 from decimal import Decimal
+from random import SystemRandom
 from zoneinfo import ZoneInfo
 
 from django.db import transaction
@@ -21,6 +22,7 @@ SIGNAL_TEMPLATES = (
     ("SOL/USDT", "SELL", Decimal("145")), ("XRP/USDT", "BUY", Decimal("0.55")),
     ("BNB/USDT", "SELL", Decimal("590")), ("DOGE/USDT", "BUY", Decimal("0.12")),
 )
+RANDOM = SystemRandom()
 
 
 def kenya_today():
@@ -37,10 +39,12 @@ def create_scheduled_signals(for_date=None):
     """Idempotently create scheduled, simulated trade signals for Kenya time."""
     for_date = for_date or kenya_today()
     signals = []
-    for index, (slot, signal_time) in enumerate(SIGNAL_TIMES):
-        pair, direction, entry = SIGNAL_TEMPLATES[(for_date.toordinal() + index) % len(SIGNAL_TEMPLATES)]
-        take_profit = entry * (Decimal("1.012") if direction == "BUY" else Decimal("0.988"))
-        stop_loss = entry * (Decimal("0.994") if direction == "BUY" else Decimal("1.006"))
+    for slot, signal_time in SIGNAL_TIMES:
+        pair, direction, baseline_entry = RANDOM.choice(SIGNAL_TEMPLATES)
+        variation = Decimal(str(RANDOM.uniform(0.985, 1.015))).quantize(Decimal("0.00000001"))
+        entry = (baseline_entry * variation).quantize(Decimal("0.00000001"))
+        take_profit = (entry * (Decimal("1.012") if direction == "BUY" else Decimal("0.988"))).quantize(Decimal("0.00000001"))
+        stop_loss = (entry * (Decimal("0.994") if direction == "BUY" else Decimal("1.006"))).quantize(Decimal("0.00000001"))
         signal, created = Signal.objects.get_or_create(
             signal_date=for_date, slot=slot,
             defaults={"scheduled_at": datetime.combine(for_date, signal_time, tzinfo=KENYA_TZ), "pair": pair,
@@ -147,6 +151,8 @@ def participate_in_signal(*, user, investment_id, signal_id):
     if SignalParticipation.objects.filter(user=user, investment=investment, signal=signal).exists():
         raise ValueError("This signal was already traded.")
     SignalParticipation.objects.create(user=user, investment=investment, signal=signal)
+    # principal is the amount locked for this specific trade balance. A 1% signal
+    # therefore pays 1% of that locked amount, not of the user's whole wallet.
     amount = (investment.principal * signal.profit_rate).quantize(Decimal("0.01"))
     session, created = EarningSession.objects.get_or_create(investment=investment, signal=signal, defaults={"user": user, "session_date": signal.signal_date})
     if not created or session.status == EarningSession.Status.MISSED:

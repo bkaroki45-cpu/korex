@@ -85,16 +85,8 @@ button {
 
     border-radius: 11px;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    background: var(--primary);
-
-    color: white;
-
-    font-size: 19px;
-    font-weight: 800;
+    object-fit: cover;
+    background: #06100c;
 }
 
 .brand-name {

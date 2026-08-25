@@ -20,6 +20,8 @@ class CryptoDepositAdmin(admin.ModelAdmin):
     search_fields = ("user__email", "transaction_hash", "provider_reference", "deposit_address__address")
     readonly_fields = ("user", "deposit_address", "asset", "network", "amount", "transaction_hash", "provider_reference", "receiving_address", "proof", "credited_at", "confirmed_at", "approved_by", "approved_at", "created_at", "updated_at")
     actions = ("mark_completed", "reject_deposits")
+    list_select_related = ("user", "approved_by")
+    date_hierarchy = "created_at"
     @admin.display(description="CloudD 1 Account ID")
     def account_id(self, obj): return obj.user.account_id
     @admin.action(description="Mark selected pending deposits as completed")
@@ -61,6 +63,7 @@ class WalletAdmin(admin.ModelAdmin):
     readonly_fields = (
         "updated_at",
     )
+    list_select_related = ("user",)
 
 @admin.register(WithdrawalNetwork)
 class WithdrawalNetworkAdmin(admin.ModelAdmin):
@@ -75,6 +78,10 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
     list_display = ("user", "account_id", "amount", "asset", "network", "status", "created_at", "completed_at")
     readonly_fields = ("user", "amount", "asset", "address", "network", "completed_by", "completed_at", "created_at")
     actions = ("mark_completed", "reject_requests")
+    list_filter = ("status", "asset", "network", "created_at")
+    search_fields = ("user__email", "user__account_id", "address")
+    list_select_related = ("user", "completed_by")
+    date_hierarchy = "created_at"
     @admin.display(description="CloudD 1 Account ID")
     def account_id(self, obj): return obj.user.account_id
     @admin.action(description="Mark selected pending withdrawals as completed")

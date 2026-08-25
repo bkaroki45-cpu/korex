@@ -28,4 +28,7 @@ class TransactionAdmin(admin.ModelAdmin):
 
     readonly_fields = (
         "created_at",
+        "completed_at",
     )
+    list_select_related = ("user",)
+    date_hierarchy = "created_at"

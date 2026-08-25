@@ -34,12 +34,16 @@ class SignUpForm(UserCreationForm):
         super().__init__(*args, **kwargs)
         self.fields["first_name"].required = True
         self.fields["last_name"].required = True
-        self.fields["email"].widget.attrs.update({"autocomplete": "email", "placeholder": "you@gmail.com"})
-        self.fields["phone_local"].widget.attrs.update({"inputmode": "tel", "placeholder": "712 345 678"})
+        self.fields["first_name"].widget.attrs.update({"autocomplete": "given-name", "placeholder": "First name"})
+        self.fields["last_name"].widget.attrs.update({"autocomplete": "family-name", "placeholder": "Last name"})
+        self.fields["email"].widget.attrs.update({"autocomplete": "email", "placeholder": "you@example.com"})
+        self.fields["phone_local"].widget.attrs.update({"autocomplete": "tel-national", "inputmode": "tel", "placeholder": "712 345 678"})
         if self.initial.get("referral_code"):
             self.fields["referral_code"].initial = self.initial["referral_code"]
         self.fields["password1"].widget.attrs["autocomplete"] = "new-password"
         self.fields["password2"].widget.attrs["autocomplete"] = "new-password"
+        self.fields["password1"].help_text = "Use at least 8 characters and avoid a common password."
+        self.fields["password2"].help_text = "Enter the same password again to confirm it."
 
     def clean_email(self):
         return self.cleaned_data["email"].strip().lower()
@@ -68,8 +72,8 @@ class EmailAuthenticationForm(AuthenticationForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["username"].widget.attrs["autocomplete"] = "email"
-        self.fields["password"].widget.attrs["autocomplete"] = "current-password"
+        self.fields["username"].widget.attrs.update({"autocomplete": "email", "placeholder": "you@example.com"})
+        self.fields["password"].widget.attrs.update({"autocomplete": "current-password", "placeholder": "Enter your password"})
 
 
 class WithdrawalDetailsForm(forms.ModelForm):

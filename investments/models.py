@@ -43,6 +43,11 @@ class Investment(models.Model):
         session = self.earning_sessions.filter(session_date=timezone.localdate(), status="SETTLED").first()
         return session.earning_amount if session else Decimal("0.00")
 
+    @property
+    def daily_profit_percentage(self):
+        """Human-readable rate for a fractional stored daily rate."""
+        return self.daily_rate * Decimal("100")
+
 
 class Signal(models.Model):
     class Status(models.TextChoices):
@@ -74,6 +79,11 @@ class Signal(models.Model):
     def __str__(self):
         return f"{self.pair} {self.slot} {self.signal_date}"
 
+    @property
+    def profit_percentage(self):
+        """The stored rate is a fraction; the interface displays a percentage."""
+        return self.profit_rate * Decimal("100")
+
 
 class EarningSession(models.Model):
     """Immutable payout ledger for a specific investment and published signal."""
@@ -104,6 +114,10 @@ class EarningSession(models.Model):
     class Meta:
         ordering = ["-created_at"]
         constraints = [models.UniqueConstraint(fields=["investment", "signal"], name="one_payout_per_investment_signal")]
+
+    @property
+    def earning_percentage(self):
+        return self.earning_rate * Decimal("100")
 
 
 class SignalParticipation(models.Model):

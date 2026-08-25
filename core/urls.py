@@ -3,6 +3,10 @@ from django.urls import include, path
 
 from .views import home
 
+admin.site.site_header = "CLOUDD 1 Administration"
+admin.site.site_title = "CLOUDD 1 Admin"
+admin.site.index_title = "Operations dashboard"
+
 
 urlpatterns = [
     path("", home, name="home"),
