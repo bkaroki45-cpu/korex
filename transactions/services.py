@@ -36,7 +36,7 @@ def create_manual_locked_deposit(*, user, amount, admin_user, description=""):
         status=Investment.Status.ACTIVE,
     )
     reference = f"ADMIN-DEPOSIT-{secrets.token_urlsafe(10).upper()}"
-    return Transaction.objects.create(
+    ledger_entry = Transaction.objects.create(
         user=user,
         transaction_type=Transaction.TransactionType.DEPOSIT,
         amount=amount,
@@ -47,3 +47,11 @@ def create_manual_locked_deposit(*, user, amount, admin_user, description=""):
         status=Transaction.Status.COMPLETED,
         completed_at=now,
     )
+    from referrals.services import grant_activation_rewards
+    grant_activation_rewards(
+        user=user,
+        amount=amount,
+        reference_prefix=reference,
+        description=f"Referral gift for activated ${amount:.2f} trade balance.",
+    )
+    return ledger_entry

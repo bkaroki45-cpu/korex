@@ -22,7 +22,7 @@ def new_referral_code():
 def refresh_referrer_status(referrer):
     profile, _ = ReferralProfile.objects.select_for_update().get_or_create(user=referrer, defaults={"referral_code": new_referral_code()})
     direct_users = Referral.objects.filter(referrer=referrer, is_active=True).values("referred_user")
-    active_users = Investment.objects.filter(user_id__in=direct_users, status=Investment.Status.ACTIVE, deposit__status="COMPLETED").values("user").distinct()
+    active_users = Investment.objects.filter(user_id__in=direct_users, status=Investment.Status.ACTIVE).values("user").distinct()
     profile.total_referrals = Referral.objects.filter(referrer=referrer).count()
     profile.active_referrals = active_users.count()
     profile.team_volume = sum((investment.principal for investment in Investment.objects.filter(user_id__in=active_users, status=Investment.Status.ACTIVE)), Decimal("0.00"))
@@ -90,3 +90,37 @@ def grant_deposit_rewards(*, deposit):
         Transaction.objects.create(user=recipient, transaction_type=Transaction.TransactionType.REFERRAL, amount=reward,
             balance_before=before, balance_after=wallet.available_balance, reference=reference,
             description=f"Referral reward for approved deposit {deposit.id}", status=Transaction.Status.COMPLETED)
+
+
+@transaction.atomic
+def grant_activation_rewards(*, user, amount, reference_prefix, description):
+    """Credit the CLOUDD 1 referral gifts for any qualifying activated trade balance."""
+    from transactions.models import Transaction
+    from wallet.models import Wallet
+
+    try:
+        referral = Referral.objects.select_related("referrer", "referred_user").get(referred_user=user, is_active=True)
+    except Referral.DoesNotExist:
+        return
+
+    for recipient, kind in ((referral.referred_user, "user"), (referral.referrer, "referrer")):
+        reference = f"{reference_prefix}-{kind}"
+        if Transaction.objects.filter(reference=reference).exists():
+            continue
+        reward = _reward_for(amount, kind)
+        if not reward:
+            continue
+        wallet = Wallet.objects.select_for_update().get(user=recipient)
+        before = wallet.available_balance
+        wallet.available_balance += reward
+        wallet.save(update_fields=["available_balance", "updated_at"])
+        if kind == "referrer":
+            profile, _ = ReferralProfile.objects.select_for_update().get_or_create(user=recipient, defaults={"referral_code": new_referral_code()})
+            profile.referral_earnings += reward
+            profile.save(update_fields=["referral_earnings", "updated_at"])
+        Transaction.objects.create(
+            user=recipient, transaction_type=Transaction.TransactionType.REFERRAL,
+            amount=reward, balance_before=before, balance_after=wallet.available_balance,
+            reference=reference, description=description, status=Transaction.Status.COMPLETED,
+        )
+    refresh_referrer_status(referral.referrer)

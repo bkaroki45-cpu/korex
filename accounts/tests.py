@@ -2,6 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from .models import User
+from referrals.models import ReferralProfile
 
 
 class AuthenticationFlowTests(TestCase):
@@ -41,3 +42,12 @@ class AuthenticationFlowTests(TestCase):
         response = self.client.post(reverse("logout"))
         self.assertRedirects(response, reverse("login"))
         self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_invitation_link_redirects_to_locked_registration_code(self):
+        referrer = User.objects.create_user(username="referrer@example.com", email="referrer@example.com", password="StrongPassword123!")
+        code = ReferralProfile.objects.get(user=referrer).referral_code
+        response = self.client.get(reverse("referrals:join", kwargs={"code": code}))
+        self.assertRedirects(response, f"{reverse('signup')}?ref={code}")
+        registration = self.client.get(response.url)
+        self.assertContains(registration, 'name="referrer_code"')
+        self.assertContains(registration, 'disabled')
