@@ -6,6 +6,7 @@ from django.urls import reverse
 from investments.models import Investment
 from .models import Referral, ReferralProfile
 from .services import new_referral_code
+from accounts.kyc import is_kyc_verified
 
 
 @login_required
@@ -21,8 +22,9 @@ def referrals_earnings(request):
         active = user.investments.filter(status=Investment.Status.ACTIVE).exists()
         team.append({"user": user, "joined": referral.created_at, "active": active,
                      "trade_profit": user.investments.aggregate(total=Sum("total_profit"))["total"] or 0})
-    referral_link = request.build_absolute_uri(reverse("referrals:join", kwargs={"code": profile.referral_code}))
-    return render(request, "referrals/overview.html", {"profile": profile, "team": team, "referral_link": referral_link})
+    verified = is_kyc_verified(request.user)
+    referral_link = request.build_absolute_uri(reverse("referrals:join", kwargs={"code": profile.referral_code})) if verified else ""
+    return render(request, "referrals/overview.html", {"profile": profile, "team": team, "referral_link": referral_link, "kyc_verified": verified})
 
 
 def join_referral(request, code):

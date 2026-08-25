@@ -4,7 +4,7 @@ from decimal import Decimal
 from django.test import TestCase
 from django.utils import timezone
 
-from accounts.models import User
+from accounts.models import KYCVerification, User
 from investments.models import Investment, Signal, SignalParticipation
 from investments.services import eligible_signals_for_user, kenya_today, mark_missed_signals, participate_in_signal, settle_due_trades
 from memberships.models import Membership
@@ -13,6 +13,7 @@ from memberships.models import Membership
 class DailySignalProfitTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="investor", email="investor@example.com", password="test-password")
+        KYCVerification.objects.create(user=self.user, status=KYCVerification.Status.VERIFIED)
         self.investment = Investment.objects.create(
             user=self.user, principal=Decimal("500.00"), current_value=Decimal("500.00"),
             daily_rate=Decimal("0.0200"), duration_days=35, end_date=timezone.now() + timedelta(days=35),

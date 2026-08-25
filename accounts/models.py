@@ -57,3 +57,39 @@ class User(AbstractUser):
                     self.account_id = candidate
                     break
         super().save(*args, **kwargs)
+
+
+class KYCVerification(models.Model):
+    class Status(models.TextChoices):
+        NOT_STARTED = "NOT_STARTED", "Not started"
+        IN_PROGRESS = "IN_PROGRESS", "In progress"
+        AWAITING_USER = "AWAITING_USER", "Awaiting user"
+        IN_REVIEW = "IN_REVIEW", "In review"
+        VERIFIED = "VERIFIED", "Verified"
+        DECLINED = "DECLINED", "Declined"
+        RESUBMITTED = "RESUBMITTED", "Resubmitted"
+        ABANDONED = "ABANDONED", "Abandoned"
+        EXPIRED = "EXPIRED", "Expired"
+        KYC_EXPIRED = "KYC_EXPIRED", "KYC expired"
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="kyc_verification")
+    status = models.CharField(max_length=24, choices=Status.choices, default=Status.NOT_STARTED)
+    didit_session_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
+    vendor_data = models.CharField(max_length=255, blank=True)
+    verified_at = models.DateTimeField(blank=True, null=True)
+    last_status_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.email} — {self.get_status_display()}"
+
+
+class DiditWebhookEvent(models.Model):
+    event_id = models.CharField(max_length=255, unique=True)
+    webhook_type = models.CharField(max_length=100)
+    session_id = models.CharField(max_length=255, blank=True)
+    processed_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.event_id

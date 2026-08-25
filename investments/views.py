@@ -9,6 +9,7 @@ from django.utils.timezone import timedelta
 
 from .models import EarningSession, Investment, Signal, SignalParticipation
 from .services import create_scheduled_signals, eligible_signals_for_user, kenya_today, mark_missed_signals, membership_for_user, participate_in_signal, settle_due_trades
+from accounts.kyc import is_kyc_verified
 
 MINIMUM_INVESTMENT = Decimal("500.00")
 PLAN_DETAILS = {name: {"name": name.title(), "minimum": MINIMUM_INVESTMENT, "daily_rate": Decimal("0.0100"), "duration_days": 35}
@@ -31,6 +32,7 @@ def investments(request):
         "investments": user_investments, "signals": signals, "active_investments": active_investments,
         "participation_ids": participation_ids, "missed_signal_ids": missed_signal_ids, "paid_ids": paid_ids, "today": today,
         "is_team_leader": membership_for_user(request.user).membership_type == "TEAM_LEADER",
+        "kyc_verified": is_kyc_verified(request.user),
         "trade_history": request.user.earning_sessions.select_related("signal").order_by("-created_at")[:12],
     })
 

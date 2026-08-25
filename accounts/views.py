@@ -1,9 +1,16 @@
+import json
+
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseBadRequest, JsonResponse
 from django.shortcuts import redirect, render
 from django.db import transaction
+from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 
 from .forms import EmailAuthenticationForm, SignUpForm, WithdrawalDetailsForm
+from .kyc import apply_webhook_event, create_didit_session, verification_for, verify_webhook_signature
 
 
 def signup(request):
@@ -51,3 +58,40 @@ def account_settings(request):
         form.save()
         return redirect("account_settings")
     return render(request, "accounts/settings.html", {"form": form})
+
+
+@login_required
+def kyc(request):
+    return render(request, "accounts/kyc.html", {"verification": verification_for(request.user)})
+
+
+@login_required
+@require_POST
+def start_kyc(request):
+    try:
+        session = create_didit_session(
+            user=request.user,
+            callback_url=request.build_absolute_uri(reverse("kyc_done")),
+        )
+    except ValueError as error:
+        return JsonResponse({"detail": str(error)}, status=503)
+    return JsonResponse(session)
+
+
+@login_required
+def kyc_done(request):
+    return render(request, "accounts/kyc_done.html", {"verification": verification_for(request.user)})
+
+
+@csrf_exempt
+@require_POST
+def didit_webhook(request):
+    try:
+        payload = json.loads(request.body)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return HttpResponseBadRequest("Invalid JSON payload.")
+    if not verify_webhook_signature(payload, request.headers.get("X-Signature-V2", ""), request.headers.get("X-Timestamp", "")):
+        return JsonResponse({"detail": "Invalid webhook signature."}, status=401)
+    if not apply_webhook_event(payload):
+        return HttpResponseBadRequest("Unsupported or unmatched Didit event.")
+    return JsonResponse({"ok": True})

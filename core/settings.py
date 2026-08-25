@@ -151,6 +151,12 @@ AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"
 
+# Didit workflow identifiers are safe application configuration.  The API key
+# and webhook signing secret are deliberately read only from the environment.
+DIDIT_WORKFLOW_ID = "42a590cf-ed1c-47d8-ab82-bc2ee3170d75"
+DIDIT_API_KEY = os.getenv("DIDIT_API_KEY", "")
+DIDIT_WEBHOOK_SECRET = os.getenv("DIDIT_WEBHOOK_SECRET", "")
+
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

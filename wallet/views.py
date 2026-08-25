@@ -13,6 +13,7 @@ from django.views.decorators.http import require_POST
 
 from .models import CryptoDeposit, PlatformConfiguration, WithdrawalRequest
 from .services import CRYPTO_PROVIDER_MODE, get_deposit_address, record_provider_deposit, submit_manual_deposit
+from accounts.kyc import is_kyc_verified
 
 
 @login_required
@@ -43,6 +44,9 @@ def verify_transaction_hash(request):
 @login_required
 @require_POST
 def request_withdrawal(request):
+    if not is_kyc_verified(request.user):
+        messages.error(request, "Identity verification required. Please complete KYC verification before making a withdrawal.")
+        return redirect("kyc")
     try:
         amount = Decimal(request.POST.get("amount", "")).quantize(Decimal("0.01"))
     except Exception:

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import User
+from .models import DiditWebhookEvent, KYCVerification, User
 
 
 @admin.register(User)
@@ -65,3 +65,19 @@ class CustomUserAdmin(UserAdmin):
             },
         ),
     )
+
+
+@admin.register(KYCVerification)
+class KYCVerificationAdmin(admin.ModelAdmin):
+    list_display = ("user", "status", "didit_session_id", "verified_at", "last_status_at")
+    list_filter = ("status",)
+    search_fields = ("user__email", "user__username", "didit_session_id", "vendor_data")
+    readonly_fields = ("created_at", "updated_at", "verified_at", "last_status_at")
+    list_select_related = ("user",)
+
+
+@admin.register(DiditWebhookEvent)
+class DiditWebhookEventAdmin(admin.ModelAdmin):
+    list_display = ("event_id", "webhook_type", "session_id", "processed_at")
+    search_fields = ("event_id", "session_id")
+    readonly_fields = ("event_id", "webhook_type", "session_id", "processed_at")

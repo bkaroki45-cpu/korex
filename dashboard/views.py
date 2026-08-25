@@ -11,6 +11,7 @@ from referrals.models import ReferralProfile
 from referrals.services import new_referral_code
 from transactions.models import Transaction
 from wallet.models import PlatformConfiguration
+from accounts.kyc import is_kyc_verified
 
 
 @login_required
@@ -32,6 +33,7 @@ def dashboard(request):
         "news": get_market_news() or [],
         "deposit_config": PlatformConfiguration.current(),
         "withdrawal_details_complete": bool(request.user.withdrawal_address and request.user.withdrawal_network),
+        "kyc_verified": is_kyc_verified(request.user),
     })
 
 

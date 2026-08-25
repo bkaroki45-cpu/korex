@@ -134,6 +134,9 @@ def mature_due_investments():
 
 @transaction.atomic
 def participate_in_signal(*, user, investment_id, signal_id):
+    from accounts.kyc import is_kyc_verified
+    if not is_kyc_verified(user):
+        raise ValueError("Identity verification required. Complete KYC before participating in signals.")
     now = timezone.now()
     config = PlatformConfiguration.current()
     investment = Investment.objects.select_for_update().get(id=investment_id, user=user)
