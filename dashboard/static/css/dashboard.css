@@ -134,6 +134,7 @@
 .transaction-row { display: flex; justify-content: space-between; gap: 15px; padding: 12px; border-radius: 10px; background: rgba(255,255,255,.025); }
 .transaction-row > div:last-child { text-align: right; }
 .transaction-row strong { font-size: 13px; }
+.transaction-row > div:last-child small { display: inline-block; margin-top: 4px; padding: 3px 7px; border: 1px solid rgba(112, 224, 176, .24); border-radius: 999px; background: rgba(48, 182, 75, .1); color: #83e9ac; font-size: 9px; font-weight: 800; letter-spacing: .04em; }
 
 
 /* PANELS */

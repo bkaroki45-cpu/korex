@@ -4,7 +4,8 @@ from django.test import TestCase
 
 from accounts.models import User
 from wallet.models import CryptoDeposit, WithdrawalNetwork, WithdrawalRequest
-from wallet.services import credit_confirmed_deposit, get_deposit_address, record_provider_deposit
+from wallet.services import complete_withdrawal, credit_confirmed_deposit, get_deposit_address, record_provider_deposit
+from transactions.models import Transaction
 
 
 class CryptoDepositTests(TestCase):
@@ -70,3 +71,18 @@ class WithdrawalRequestTests(TestCase):
         self.assertEqual(request.address, "TExampleWalletAddress")
         self.assertEqual(self.user.withdrawal_network, "TRC20")
         self.assertEqual(self.user.wallet.available_balance, Decimal("30.00"))
+
+    def test_admin_completion_updates_the_user_transaction_status(self):
+        self.client.post("/wallet/withdraw/", {
+            "amount": "20.00", "withdrawal_network": "TRC20", "withdrawal_address": "TExampleWalletAddress",
+        })
+        withdrawal = WithdrawalRequest.objects.get(user=self.user)
+        admin = User.objects.create_superuser(username="admin", email="admin@example.com", password="test-password")
+
+        complete_withdrawal(withdrawal_id=withdrawal.id, admin_user=admin)
+
+        withdrawal.refresh_from_db()
+        ledger_entry = Transaction.objects.get(reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}")
+        self.assertEqual(withdrawal.status, WithdrawalRequest.Status.COMPLETED)
+        self.assertEqual(ledger_entry.status, Transaction.Status.COMPLETED)
+        self.assertIsNotNone(ledger_entry.completed_at)
