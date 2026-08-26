@@ -104,3 +104,23 @@ class WithdrawalRequestTests(TestCase):
         self.assertRedirects(response, change_url)
         withdrawal.refresh_from_db()
         self.assertEqual(withdrawal.status, WithdrawalRequest.Status.COMPLETED)
+
+    def test_transaction_change_page_can_complete_a_pending_withdrawal(self):
+        self.client.post("/wallet/withdraw/", {
+            "amount": "20.00", "withdrawal_network": "TRC20", "withdrawal_address": "TExampleWalletAddress",
+        })
+        withdrawal = WithdrawalRequest.objects.get(user=self.user)
+        ledger_entry = Transaction.objects.get(reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}")
+        admin = User.objects.create_superuser(username="admin", email="admin@example.com", password="test-password")
+        self.client.force_login(admin)
+
+        change_url = reverse("admin:transactions_transaction_change", args=[ledger_entry.id])
+        response = self.client.get(change_url)
+        self.assertContains(response, "Mark withdrawal completed")
+
+        response = self.client.post(reverse("admin:transactions_transaction_complete_withdrawal", args=[ledger_entry.id]))
+        self.assertRedirects(response, change_url)
+        withdrawal.refresh_from_db()
+        ledger_entry.refresh_from_db()
+        self.assertEqual(withdrawal.status, WithdrawalRequest.Status.COMPLETED)
+        self.assertEqual(ledger_entry.status, Transaction.Status.COMPLETED)
