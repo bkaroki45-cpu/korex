@@ -95,7 +95,7 @@ def mark_missed_signals(now=None):
 
 @transaction.atomic
 def settle_due_trades(now=None):
-    """Credit the wallet once, five hours after a simulated signal trade was recorded."""
+    """Credit the wallet once after the configured simulated-trade settlement delay."""
     now = now or timezone.now()
     settled = 0
     for session in EarningSession.objects.select_for_update().filter(status=EarningSession.Status.ACTIVE, payout_due_at__lte=now).select_related("investment", "user", "signal"):
@@ -105,7 +105,9 @@ def settle_due_trades(now=None):
         wallet.available_balance += amount
         wallet.total_profit += amount
         wallet.save(update_fields=["available_balance", "total_profit", "updated_at"])
-        session.status, session.settled_at = EarningSession.Status.SETTLED, now
+        # A completed signal is shown as TRADED in the activity log. The
+        # wallet credit and status transition happen in the same transaction.
+        session.status, session.settled_at = EarningSession.Status.TRADED, now
         session.save(update_fields=["status", "settled_at"])
         investment = session.investment
         investment.total_profit += amount

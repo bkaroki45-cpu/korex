@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from accounts.models import KYCVerification, User
-from investments.models import Investment, Signal, SignalParticipation
+from investments.models import EarningSession, Investment, Signal, SignalParticipation
 from investments.services import eligible_signals_for_user, kenya_today, mark_missed_signals, participate_in_signal, settle_due_trades
 from memberships.models import Membership
 
@@ -35,6 +35,10 @@ class DailySignalProfitTests(TestCase):
         self.user.wallet.refresh_from_db()
         self.assertEqual(self.user.wallet.total_profit, Decimal("10.00"))
         self.assertEqual(SignalParticipation.objects.count(), 2)
+        self.assertEqual(
+            self.investment.earning_sessions.filter(status=EarningSession.Status.TRADED).count(),
+            2,
+        )
 
     def test_everyone_can_see_team_leader_signal_but_regular_member_cannot_trade_it(self):
         self.assertIn(self.evening, eligible_signals_for_user(self.user))

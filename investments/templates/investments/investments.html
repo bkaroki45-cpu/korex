@@ -23,13 +23,15 @@
     <article class="copy-signal-card">
       <div class="signal-top"><div><span class="signal-time">{{ signal.get_slot_display }}</span><h3>{{ signal.pair }}</h3></div><span class="direction {{ signal.direction|lower }}">{{ signal.direction }}</span></div>
       <div class="signal-levels"><div><span>Entry</span><strong>{{ signal.entry_price|default:"—" }}</strong></div><div><span>Target</span><strong class="take-profit">{{ signal.take_profit|default:"—" }}</strong></div><div><span>Risk</span><strong class="stop-loss">{{ signal.stop_loss|default:"—" }}</strong></div></div>
+      <div class="signal-expiry" data-signal-expires="{{ signal.scheduled_at|date:'c' }}">Expires in <strong>15:00</strong></div>
       {% if signal.id in missed_signal_ids %}
         <span class="signal-missed">MISSED</span>
-      {% elif signal.id in participation_ids %}
+      {% elif signal.id in active_signal_ids %}
+        <span class="active-trade-signal">● TRADE ACTIVE</span>
+      {% elif signal.id in traded_signal_ids or signal.id in participation_ids %}
         <span class="traded-signal">✓ TRADED</span>
       {% elif active_investments %}
-        <button type="button" class="copy-open-button" data-copy-target="copy-form-{{ signal.id }}">COPY SIGNAL →</button>
-        <form method="post" action="{% url 'investments:participate' signal.id %}" id="copy-form-{{ signal.id }}" class="copy-form">{% csrf_token %}<label>Use locked trade balance</label><select name="investment_id">{% for investment in active_investments %}<option value="{{ investment.id }}">{{ investment.principal|floatformat:2 }} USD locked balance</option>{% endfor %}</select><button type="submit">Confirm copy trade</button></form>
+        <form method="post" action="{% url 'investments:participate' signal.id %}" class="copy-direct-form">{% csrf_token %}<select name="investment_id" aria-label="Locked trade balance">{% for investment in active_investments %}<option value="{{ investment.id }}">{{ investment.principal|floatformat:2 }} USD locked balance</option>{% endfor %}</select><button type="submit">COPY SIGNAL →</button></form>
       {% else %}
         <a class="copy-open-button" href="{% url 'wallet:deposit_crypto' %}">FUND WALLET</a>
       {% endif %}
@@ -44,10 +46,31 @@
   <div class="copy-section-heading"><div><span class="copy-kicker">COMPLETE HISTORY</span><h2>Signal activity</h2></div></div>
   <div class="activity-list">
     {% for trade in trade_history %}
-    <article class="activity-row"><div class="activity-pair"><span class="pair-mark">{{ trade.display_asset|slice:":1" }}</span><div><strong>{{ trade.display_asset }}</strong><small>{{ trade.session_date }} · {{ trade.display_direction }}</small></div></div><div class="activity-meta"><span>Target</span><strong>{{ trade.earning_percentage|floatformat:2 }}%</strong></div><div class="activity-meta"><span>Result</span><strong>{% if trade.status == 'SETTLED' %}{{ trade.earning_amount|floatformat:2 }} USD{% else %}—{% endif %}</strong></div><span class="activity-status {{ trade.status|lower }}">{{ trade.get_status_display }}</span></article>
+    <article class="activity-row"><div class="activity-pair"><span class="pair-mark">{{ trade.display_asset|slice:":1" }}</span><div><strong>{{ trade.display_asset }}</strong><small>{{ trade.session_date }} · {{ trade.display_direction }}</small></div></div><div class="activity-meta"><span>Target</span><strong>{{ trade.earning_percentage|floatformat:2 }}%</strong></div><div class="activity-meta"><span>Result</span><strong>{% if trade.status == 'TRADED' or trade.status == 'SETTLED' %}{{ trade.earning_amount|floatformat:2 }} USD{% else %}—{% endif %}</strong></div><span class="activity-status {% if trade.status == 'SETTLED' %}traded{% else %}{{ trade.status|lower }}{% endif %}">{% if trade.status == 'SETTLED' %}Traded{% else %}{{ trade.get_status_display }}{% endif %}</span></article>
     {% empty %}
     <div class="copy-empty compact"><h3>No signal activity yet</h3><p>Traded, active, and missed signals will appear here.</p></div>
     {% endfor %}
   </div>
 </section>
+{% endblock %}
+{% block extra_js %}
+<script>
+(() => {
+  let refreshScheduled = false;
+  const updateCountdowns = () => {
+    document.querySelectorAll('[data-signal-expires]').forEach((item) => {
+      const remaining = Math.max(0, new Date(item.dataset.signalExpires).getTime() - Date.now());
+      const minutes = Math.floor(remaining / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+      item.querySelector('strong').textContent = remaining ? String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0') : '00:00';
+      if (!remaining && !refreshScheduled) {
+        refreshScheduled = true;
+        window.setTimeout(() => window.location.reload(), 500);
+      }
+    });
+  };
+  updateCountdowns();
+  window.setInterval(updateCountdowns, 1000);
+})();
+</script>
 {% endblock %}
