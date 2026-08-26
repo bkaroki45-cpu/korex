@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.test import TestCase
 
 from accounts.models import User
-from wallet.models import CryptoDeposit
+from wallet.models import CryptoDeposit, WithdrawalNetwork, WithdrawalRequest
 from wallet.services import credit_confirmed_deposit, get_deposit_address, record_provider_deposit
 
 
@@ -40,3 +40,33 @@ class CryptoDepositTests(TestCase):
         self.assertEqual(deposit.status, CryptoDeposit.Status.REJECTED)
         self.alice.wallet.refresh_from_db()
         self.assertEqual(self.alice.wallet.available_balance, Decimal("0.00"))
+
+
+class WithdrawalRequestTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="withdrawer", email="withdrawer@example.com", password="test-password")
+        self.user.wallet.available_balance = Decimal("50.00")
+        self.user.wallet.save(update_fields=["available_balance"])
+        WithdrawalNetwork.objects.get_or_create(code="TRC20", defaults={"name": "TRON (TRC20)", "is_enabled": True})
+        self.client.force_login(self.user)
+
+    def test_request_above_withdrawable_balance_is_rejected(self):
+        response = self.client.post("/wallet/withdraw/", {
+            "amount": "55.00", "withdrawal_network": "TRC20", "withdrawal_address": "TExampleWalletAddress",
+        })
+        self.assertRedirects(response, "/wallet/withdraw/")
+        self.user.wallet.refresh_from_db()
+        self.assertEqual(self.user.wallet.available_balance, Decimal("50.00"))
+        self.assertFalse(WithdrawalRequest.objects.filter(user=self.user).exists())
+
+    def test_request_saves_destination_and_reserves_withdrawable_balance(self):
+        response = self.client.post("/wallet/withdraw/", {
+            "amount": "20.00", "withdrawal_network": "TRC20", "withdrawal_address": "TExampleWalletAddress",
+        })
+        self.assertRedirects(response, "/wallet/withdraw/")
+        self.user.refresh_from_db()
+        self.user.wallet.refresh_from_db()
+        request = WithdrawalRequest.objects.get(user=self.user)
+        self.assertEqual(request.address, "TExampleWalletAddress")
+        self.assertEqual(self.user.withdrawal_network, "TRC20")
+        self.assertEqual(self.user.wallet.available_balance, Decimal("30.00"))

@@ -12,7 +12,7 @@ from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .models import CryptoDeposit, PlatformConfiguration, WithdrawalRequest, Wallet
+from .models import CryptoDeposit, PlatformConfiguration, WithdrawalNetwork, WithdrawalRequest, Wallet
 from transactions.models import Transaction
 from .services import CRYPTO_PROVIDER_MODE, get_deposit_address, record_provider_deposit, submit_manual_deposit
 from accounts.kyc import is_kyc_verified
@@ -48,17 +48,30 @@ def request_withdrawal(request):
     if not is_kyc_verified(request.user):
         messages.error(request, "Identity verification required. Please complete KYC verification before making a withdrawal.")
         return redirect("kyc")
+    config = PlatformConfiguration.current()
+    networks = WithdrawalNetwork.objects.filter(is_enabled=True).order_by("name")
     if request.method == "GET":
-        return render(request, "wallet/withdraw.html", {"wallet": request.user.wallet, "requests": request.user.withdrawal_requests.order_by("-created_at")[:10]})
+        return render(request, "wallet/withdraw.html", {
+            "wallet": request.user.wallet, "requests": request.user.withdrawal_requests.order_by("-created_at")[:10],
+            "config": config, "networks": networks,
+        })
     try:
         amount = Decimal(request.POST.get("amount", "")).quantize(Decimal("0.01"))
     except Exception:
         messages.error(request, "Enter a valid withdrawal amount.")
         return redirect("wallet:request_withdrawal")
-    if amount <= 0 or amount > request.user.wallet.available_balance:
+    address = request.POST.get("withdrawal_address", "").strip()
+    network = request.POST.get("withdrawal_network", "").strip()
+    if amount <= 0:
+        messages.error(request, "Enter a valid withdrawal amount.")
+    elif amount < config.minimum_withdrawal:
+        messages.error(request, f"Minimum withdrawal is {config.minimum_withdrawal:.2f} USDT.")
+    elif amount > request.user.wallet.available_balance:
         messages.error(request, "Amount exceeds your withdrawable balance.")
-    elif not request.user.withdrawal_address or not request.user.withdrawal_network:
-        messages.error(request, "Add your withdrawal address and network in account settings first.")
+    elif not address or not network:
+        messages.error(request, "Enter both a withdrawal address and network.")
+    elif not networks.filter(code=network).exists():
+        messages.error(request, "Choose an available withdrawal network.")
     else:
         with transaction.atomic():
             wallet = Wallet.objects.select_for_update().get(user=request.user)
@@ -68,7 +81,10 @@ def request_withdrawal(request):
             before = wallet.available_balance
             wallet.available_balance -= amount
             wallet.save(update_fields=["available_balance", "updated_at"])
-            withdrawal = WithdrawalRequest.objects.create(user=request.user, amount=amount, address=request.user.withdrawal_address, network=request.user.withdrawal_network)
+            request.user.withdrawal_address = address
+            request.user.withdrawal_network = network
+            request.user.save(update_fields=["withdrawal_address", "withdrawal_network"])
+            withdrawal = WithdrawalRequest.objects.create(user=request.user, amount=amount, address=address, network=network)
             Transaction.objects.create(user=request.user, transaction_type=Transaction.TransactionType.WITHDRAWAL, amount=amount, balance_before=before, balance_after=wallet.available_balance, reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}", description="Withdrawal amount reserved for manual processing", status=Transaction.Status.PENDING)
         messages.success(request, "Withdrawal request submitted. The amount is reserved from your withdrawable balance while it is reviewed.")
     return redirect("wallet:request_withdrawal")

@@ -72,7 +72,7 @@ class WithdrawalNetworkAdmin(admin.ModelAdmin):
 
 @admin.register(PlatformConfiguration)
 class PlatformConfigurationAdmin(admin.ModelAdmin):
-    list_display = ("deposit_asset", "deposit_network", "minimum_deposit", "principal_lock_days", "signal_window_minutes", "settlement_minutes", "team_leader_requirement")
+    list_display = ("deposit_asset", "deposit_network", "minimum_deposit", "minimum_withdrawal", "principal_lock_days", "signal_window_minutes", "settlement_minutes", "team_leader_requirement")
 
 @admin.register(WithdrawalRequest)
 class WithdrawalRequestAdmin(admin.ModelAdmin):
