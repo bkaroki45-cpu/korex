@@ -1,5 +1,9 @@
 
 from django.contrib import admin
+from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect
+from django.urls import path, reverse
+from django.utils.html import format_html
 
 from .models import CryptoDeposit, DepositAddress, OnRampOrder, PlatformConfiguration, Wallet, WithdrawalNetwork, WithdrawalRequest
 from .services import approve_manual_deposit, complete_withdrawal
@@ -76,7 +80,8 @@ class PlatformConfigurationAdmin(admin.ModelAdmin):
 
 @admin.register(WithdrawalRequest)
 class WithdrawalRequestAdmin(admin.ModelAdmin):
-    list_display = ("user", "account_id", "amount", "asset", "network", "status", "created_at", "completed_at")
+    change_form_template = "admin/wallet/withdrawalrequest/change_form.html"
+    list_display = ("user", "account_id", "amount", "asset", "network", "status", "created_at", "completed_at", "complete_link")
     readonly_fields = ("user", "amount", "asset", "address", "network", "completed_by", "completed_at", "created_at")
     actions = ("mark_completed", "reject_requests")
     list_filter = ("status", "asset", "network", "created_at")
@@ -85,6 +90,36 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
     date_hierarchy = "created_at"
     @admin.display(description="CloudD 1 Account ID")
     def account_id(self, obj): return obj.user.account_id
+
+    @admin.display(description="Process")
+    def complete_link(self, obj):
+        if obj.status != WithdrawalRequest.Status.PENDING:
+            return "—"
+        url = reverse("admin:wallet_withdrawalrequest_change", args=[obj.pk])
+        return format_html('<a class="button" href="{}">Review &amp; complete</a>', url)
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                "<int:withdrawal_id>/complete/",
+                self.admin_site.admin_view(self.complete_view),
+                name="wallet_withdrawalrequest_complete",
+            ),
+        ]
+        return custom_urls + urls
+
+    def complete_view(self, request, withdrawal_id):
+        withdrawal = get_object_or_404(WithdrawalRequest, pk=withdrawal_id)
+        if request.method != "POST":
+            return redirect("admin:wallet_withdrawalrequest_change", withdrawal_id)
+        try:
+            complete_withdrawal(withdrawal_id=withdrawal_id, admin_user=request.user)
+        except ValueError as error:
+            self.message_user(request, str(error), level=messages.ERROR)
+        else:
+            self.message_user(request, "Withdrawal completed and the user's transaction was updated to Completed.", level=messages.SUCCESS)
+        return redirect("admin:wallet_withdrawalrequest_change", withdrawal_id)
     @admin.action(description="Mark selected pending withdrawals as completed")
     def mark_completed(self, request, queryset):
         for withdrawal in queryset:

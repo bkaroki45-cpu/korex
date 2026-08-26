@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from django.test import TestCase
+from django.urls import reverse
 
 from accounts.models import User
 from wallet.models import CryptoDeposit, WithdrawalNetwork, WithdrawalRequest
@@ -86,3 +87,20 @@ class WithdrawalRequestTests(TestCase):
         self.assertEqual(withdrawal.status, WithdrawalRequest.Status.COMPLETED)
         self.assertEqual(ledger_entry.status, Transaction.Status.COMPLETED)
         self.assertIsNotNone(ledger_entry.completed_at)
+
+    def test_admin_change_page_has_a_complete_button(self):
+        self.client.post("/wallet/withdraw/", {
+            "amount": "20.00", "withdrawal_network": "TRC20", "withdrawal_address": "TExampleWalletAddress",
+        })
+        withdrawal = WithdrawalRequest.objects.get(user=self.user)
+        admin = User.objects.create_superuser(username="admin", email="admin@example.com", password="test-password")
+        self.client.force_login(admin)
+
+        change_url = reverse("admin:wallet_withdrawalrequest_change", args=[withdrawal.id])
+        response = self.client.get(change_url)
+        self.assertContains(response, "Mark withdrawal completed")
+
+        response = self.client.post(reverse("admin:wallet_withdrawalrequest_complete", args=[withdrawal.id]))
+        self.assertRedirects(response, change_url)
+        withdrawal.refresh_from_db()
+        self.assertEqual(withdrawal.status, WithdrawalRequest.Status.COMPLETED)

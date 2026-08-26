@@ -1,0 +1,13 @@
+{% extends "admin/change_form.html" %}
+
+{% block object-tools %}
+  {{ block.super }}
+  {% if original and original.status == "PENDING" %}
+    <li>
+      <form method="post" action="{% url 'admin:wallet_withdrawalrequest_complete' original.pk %}" style="display:inline">
+        {% csrf_token %}
+        <button type="submit" class="button" style="background:#198754;border:0;cursor:pointer">Mark withdrawal completed</button>
+      </form>
+    </li>
+  {% endif %}
+{% endblock %}
