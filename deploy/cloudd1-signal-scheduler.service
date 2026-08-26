@@ -1,0 +1,9 @@
+[Unit]
+Description=CLOUDD 1 signal settlement and expiry processor
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/var/www/cloudd1
+ExecStart=/var/www/cloudd1/.venv/bin/python /var/www/cloudd1/manage.py run_investment_schedule
+

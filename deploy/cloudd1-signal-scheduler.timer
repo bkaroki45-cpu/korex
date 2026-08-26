@@ -1,0 +1,11 @@
+[Unit]
+Description=Run CLOUDD 1 signal processor every minute
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+Persistent=true
+Unit=cloudd1-signal-scheduler.service
+
+[Install]
+WantedBy=timers.target
