@@ -2,6 +2,7 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import KYCVerification, User
@@ -55,5 +56,13 @@ class DailySignalProfitTests(TestCase):
         self.morning.save(update_fields=["scheduled_at"])
         mark_missed_signals(now=timezone.now() + timedelta(minutes=32))
         self.assertTrue(self.investment.earning_sessions.filter(signal=self.morning, status="MISSED").exists())
+
+    def test_signal_countdown_uses_the_server_timestamp_and_fifteen_minute_window(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("investments:investments"))
+
+        self.assertEqual(response.context["signal_window_seconds"], 15 * 60)
+        self.assertContains(response, "data-server-now-epoch-ms=")
+        self.assertContains(response, "data-signal-start-epoch-seconds=")
 
 # Create your tests here.

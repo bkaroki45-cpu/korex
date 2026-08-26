@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.utils.timezone import timedelta
 
 from .models import EarningSession, Investment, Signal, SignalParticipation
-from .services import create_scheduled_signals, eligible_signals_for_user, kenya_today, mark_missed_signals, membership_for_user, participate_in_signal, settle_due_trades
+from .services import SIGNAL_WINDOW, create_scheduled_signals, eligible_signals_for_user, kenya_today, mark_missed_signals, membership_for_user, participate_in_signal, settle_due_trades
 from accounts.kyc import is_kyc_verified
 
 MINIMUM_INVESTMENT = Decimal("500.00")
@@ -18,6 +18,7 @@ PLAN_DETAILS = {name: {"name": name.title(), "minimum": MINIMUM_INVESTMENT, "dai
 
 @login_required
 def investments(request):
+    server_now = timezone.now()
     today = kenya_today()
     create_scheduled_signals(today)
     mark_missed_signals()
@@ -40,6 +41,8 @@ def investments(request):
         "trade_history": trade_history,
         "traded_count": trade_history.filter(status__in=[EarningSession.Status.TRADED, EarningSession.Status.SETTLED]).count(),
         "missed_count": trade_history.filter(status=EarningSession.Status.MISSED).count(),
+        "server_now_epoch_ms": int(server_now.timestamp() * 1000),
+        "signal_window_seconds": int(SIGNAL_WINDOW.total_seconds()),
     })
 
 

@@ -18,12 +18,12 @@
 <section class="copy-section">
   <div class="copy-section-heading"><div><span class="copy-kicker">LIVE NOW</span><h2>Signals ready to copy</h2></div><span class="window-note">Auto-removes after 15 minutes</span></div>
   {% if signals %}
-  <div class="signal-grid">
+  <div class="signal-grid" data-server-now-epoch-ms="{{ server_now_epoch_ms }}" data-signal-window-seconds="{{ signal_window_seconds }}">
     {% for signal in signals %}
     <article class="copy-signal-card">
       <div class="signal-top"><div><span class="signal-time">{{ signal.get_slot_display }}</span><h3>{{ signal.pair }}</h3></div><span class="direction {{ signal.direction|lower }}">{{ signal.direction }}</span></div>
       <div class="signal-levels"><div><span>Entry</span><strong>{{ signal.entry_price|default:"—" }}</strong></div><div><span>Target</span><strong class="take-profit">{{ signal.take_profit|default:"—" }}</strong></div><div><span>Risk</span><strong class="stop-loss">{{ signal.stop_loss|default:"—" }}</strong></div></div>
-      <div class="signal-expiry" data-signal-expires="{{ signal.scheduled_at|date:'c' }}">Expires in <strong>15:00</strong></div>
+      <div class="signal-expiry" data-signal-start-epoch-seconds="{{ signal.scheduled_at|date:'U' }}">Expires in <strong>15:00</strong></div>
       {% if signal.id in missed_signal_ids %}
         <span class="signal-missed">MISSED</span>
       {% elif signal.id in active_signal_ids %}
@@ -56,10 +56,16 @@
 {% block extra_js %}
 <script>
 (() => {
+  const signalGrid = document.querySelector('[data-server-now-epoch-ms]');
+  const serverNowEpochMs = Number(signalGrid?.dataset.serverNowEpochMs || 0);
+  const signalWindowMs = Number(signalGrid?.dataset.signalWindowSeconds || 900) * 1000;
+  const browserStart = performance.now();
+  const serverNow = () => serverNowEpochMs + (performance.now() - browserStart);
   let refreshScheduled = false;
   const updateCountdowns = () => {
-    document.querySelectorAll('[data-signal-expires]').forEach((item) => {
-      const remaining = Math.max(0, new Date(item.dataset.signalExpires).getTime() - Date.now());
+    document.querySelectorAll('[data-signal-start-epoch-seconds]').forEach((item) => {
+      const expiry = Number(item.dataset.signalStartEpochSeconds) * 1000 + signalWindowMs;
+      const remaining = Math.max(0, expiry - serverNow());
       const minutes = Math.floor(remaining / 60000);
       const seconds = Math.floor((remaining % 60000) / 1000);
       item.querySelector('strong').textContent = remaining ? String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0') : '00:00';
