@@ -124,3 +124,18 @@ class WithdrawalRequestTests(TestCase):
         ledger_entry.refresh_from_db()
         self.assertEqual(withdrawal.status, WithdrawalRequest.Status.COMPLETED)
         self.assertEqual(ledger_entry.status, Transaction.Status.COMPLETED)
+
+    def test_completion_repairs_a_pending_transaction_for_a_completed_request(self):
+        self.client.post("/wallet/withdraw/", {
+            "amount": "20.00", "withdrawal_network": "TRC20", "withdrawal_address": "TExampleWalletAddress",
+        })
+        withdrawal = WithdrawalRequest.objects.get(user=self.user)
+        ledger_entry = Transaction.objects.get(reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}")
+        admin = User.objects.create_superuser(username="admin", email="admin@example.com", password="test-password")
+
+        withdrawal.status = WithdrawalRequest.Status.COMPLETED
+        withdrawal.save(update_fields=["status"])
+        complete_withdrawal(withdrawal_id=withdrawal.id, admin_user=admin)
+
+        ledger_entry.refresh_from_db()
+        self.assertEqual(ledger_entry.status, Transaction.Status.COMPLETED)

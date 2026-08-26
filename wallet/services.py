@@ -102,15 +102,29 @@ def approve_manual_deposit(*, deposit_id, admin_user):
 @transaction.atomic
 def complete_withdrawal(*, withdrawal_id, admin_user):
     withdrawal = WithdrawalRequest.objects.select_for_update().select_related("user").get(pk=withdrawal_id)
-    if withdrawal.status != WithdrawalRequest.Status.PENDING:
-        raise ValueError("This withdrawal was already processed.")
-    wallet = Wallet.objects.select_for_update().get(user=withdrawal.user)
-    wallet.total_withdrawn += withdrawal.amount
-    wallet.save(update_fields=["total_withdrawn", "updated_at"])
     now = timezone.now()
-    withdrawal.status, withdrawal.completed_by, withdrawal.completed_at = WithdrawalRequest.Status.COMPLETED, admin_user, now
-    withdrawal.save(update_fields=["status", "completed_by", "completed_at"])
-    Transaction.objects.filter(reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}").update(status=Transaction.Status.COMPLETED, completed_at=now, description="Manually completed withdrawal")
+    ledger_entries = Transaction.objects.select_for_update().filter(
+        user=withdrawal.user,
+        transaction_type=Transaction.TransactionType.WITHDRAWAL,
+        reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}",
+    )
+    if withdrawal.status == WithdrawalRequest.Status.REJECTED:
+        raise ValueError("A rejected withdrawal cannot be completed.")
+
+    # Retrying a completed request repairs a stale pending ledger entry without
+    # counting the same withdrawal in the wallet total a second time.
+    if withdrawal.status == WithdrawalRequest.Status.PENDING:
+        wallet = Wallet.objects.select_for_update().get(user=withdrawal.user)
+        wallet.total_withdrawn += withdrawal.amount
+        wallet.save(update_fields=["total_withdrawn", "updated_at"])
+        withdrawal.status, withdrawal.completed_by, withdrawal.completed_at = WithdrawalRequest.Status.COMPLETED, admin_user, now
+        withdrawal.save(update_fields=["status", "completed_by", "completed_at"])
+
+    ledger_entries.update(
+        status=Transaction.Status.COMPLETED,
+        completed_at=now,
+        description="Manually completed withdrawal",
+    )
     return withdrawal
 
 

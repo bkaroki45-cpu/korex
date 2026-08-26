@@ -69,11 +69,10 @@ class TransactionAdmin(admin.ModelAdmin):
         prefix = "WITHDRAWAL-REQUEST-"
         if (
             ledger_entry.transaction_type != Transaction.TransactionType.WITHDRAWAL
-            or ledger_entry.status != Transaction.Status.PENDING
             or not ledger_entry.reference.startswith(prefix)
             or not ledger_entry.reference[len(prefix):].isdigit()
         ):
-            self.message_user(request, "This is not a pending withdrawal transaction.", level=messages.ERROR)
+            self.message_user(request, "This is not a withdrawal transaction linked to a withdrawal request.", level=messages.ERROR)
             return redirect("admin:transactions_transaction_change", transaction_id)
 
         withdrawal = get_object_or_404(
