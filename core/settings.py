@@ -12,9 +12,11 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
 
 # Quick-start development settings - unsuitable for production
@@ -51,6 +53,7 @@ INSTALLED_APPS = [
     "transactions",
     "referrals.apps.ReferralsConfig",
     "memberships.apps.MembershipsConfig",
+    "support.apps.SupportConfig",
     
 ]
 
@@ -159,6 +162,8 @@ DIDIT_WEBHOOK_SECRET = os.getenv("DIDIT_WEBHOOK_SECRET", "")
 # Keep the product usable while the Didit account is being funded. Set this to
 # "true" in the protected server environment to require approved KYC again.
 KYC_ENFORCEMENT_ENABLED = os.getenv("KYC_ENFORCEMENT_ENABLED", "false").lower() == "true"
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_ADMIN_CHAT_ID = os.getenv("TELEGRAM_ADMIN_CHAT_ID", "")
 
 if not DEBUG:
     SESSION_COOKIE_SECURE = True

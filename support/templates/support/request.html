@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Support — CLOUDD 1{% endblock %}
+{% block page_title %}Support{% endblock %}
+{% block content %}
+<section class="support-page"><div><span class="support-kicker">CLOUDD 1 SUPPORT</span><h1>How can we help?</h1><p>Send a message to our team from the website, or chat with us directly on Telegram.</p><a class="telegram-link" href="https://t.me/cloudddone" target="_blank" rel="noopener">Open Telegram support</a></div><form method="post" class="support-form">{% csrf_token %}{{ form.as_p }}<button type="submit">Send support request</button></form></section>
+{% endblock %}
