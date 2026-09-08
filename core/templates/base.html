@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/mobile-nav.css' %}">
     <link rel="stylesheet" href="{% static 'css/logout.css' %}">
+    <link rel="stylesheet" href="{% static 'css/floating-dock.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -37,7 +38,7 @@
             </section>
         </main>
     </div>
-    <div class="support-float" aria-label="Support options"><a href="{% url 'support:request' %}" class="support-float-form">Need help?</a><a href="https://t.me/cloudddone" target="_blank" rel="noopener" class="support-float-telegram">Telegram support</a></div>
+    <nav class="floating-dock" aria-label="Quick support and membership links"><a href="{% url 'support:request' %}" class="dock-web">Website support</a><a href="https://t.me/CLOUDD1BOT" target="_blank" rel="noopener" class="dock-bot">Telegram bot</a><a href="https://t.me/+254785905899" target="_blank" rel="noopener" class="dock-direct">Direct Telegram</a><a href="{% url 'signup' %}" class="dock-join">Join us</a></nav>
     <script src="{% static 'js/base.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
