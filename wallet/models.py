@@ -67,7 +67,7 @@ class PlatformConfiguration(models.Model):
     deposit_network = models.CharField(max_length=32, default="TRC20")
     deposit_address = models.CharField(max_length=255, default="TLsHkop8XAc5dafJUAEEaQ9MMBNptnr1Vf")
     principal_lock_days = models.PositiveIntegerField(default=39)
-    signal_window_minutes = models.PositiveIntegerField(default=15)
+    signal_window_minutes = models.PositiveIntegerField(default=30)
     settlement_minutes = models.PositiveIntegerField(default=45)
     team_leader_requirement = models.PositiveIntegerField(default=5)
 

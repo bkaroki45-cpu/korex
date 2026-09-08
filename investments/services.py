@@ -13,7 +13,7 @@ from memberships.models import Membership
 from .models import EarningSession, Investment, Signal, SignalParticipation
 
 KENYA_TZ = ZoneInfo("Africa/Nairobi")
-SIGNAL_WINDOW = timedelta(minutes=15)
+SIGNAL_WINDOW = timedelta(minutes=30)
 TRADE_SETTLEMENT_DELAY = timedelta(minutes=45)
 SIGNAL_PROFIT_RATE = Decimal("0.0100")
 SIGNAL_TIMES = ((Signal.Slot.MORNING, time(17, 0)), (Signal.Slot.AFTERNOON, time(19, 0)), (Signal.Slot.EVENING, time(20, 0)))
