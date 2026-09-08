@@ -1,6 +1,4 @@
-{% extends "base.html" %}
-{% block title %}Support — CLOUDD 1{% endblock %}
-{% block page_title %}Support{% endblock %}
-{% block content %}
-<section class="support-page"><div><span class="support-kicker">CLOUDD 1 SUPPORT</span><h1>How can we help?</h1><p>Send a message to our team from the website, use our Telegram bot, or chat directly on Telegram.</p><a class="telegram-link" href="https://t.me/+254785905899" target="_blank" rel="noopener">Open direct Telegram support</a></div><form method="post" class="support-form">{% csrf_token %}{{ form.as_p }}<button type="submit">Send support request</button></form></section>
-{% endblock %}
+{% load static %}
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Support — CLOUDD 1</title><link rel="stylesheet" href="{% static 'css/base.css' %}"><link rel="stylesheet" href="{% static 'css/floating-dock.css' %}"></head>
+<body><main class="main-content" style="margin-left:0"><section class="page-content">{% if messages %}<div class="app-messages">{% for message in messages %}<div class="app-message {{ message.tags }}">{{ message }}</div>{% endfor %}</div>{% endif %}<section class="support-page"><div><span class="support-kicker">CLOUDD 1 SUPPORT</span><h1>How can we help?</h1><p>Send a message to our team through the website or chat directly with support on Telegram.</p><a class="telegram-link" href="https://t.me/+254785905899" target="_blank" rel="noopener">Open direct Telegram support</a></div><form method="post" class="support-form">{% csrf_token %}{{ form.as_p }}<button type="submit">Send support request</button></form></section></section></main><nav class="floating-dock" aria-label="Quick support and community links"><a href="{% url 'support:request' %}" class="dock-web">Website support</a><a href="https://t.me/+254785905899" target="_blank" rel="noopener" class="dock-direct">Direct Telegram</a><a href="https://t.me/cloudddone" target="_blank" rel="noopener" class="dock-join">Join us</a></nav></body></html>
