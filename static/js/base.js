@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const duplicate = track.querySelector('.banner-set[aria-hidden="true"]');
     if (duplicate) duplicate.style.display = "none";
     slides.forEach((slide, index) => {
-        slide.style.cssText += ";display:" + (index === 0 ? "block" : "none") + ";width:100%;height:auto;max-height:335px;object-fit:cover";
+        slide.style.cssText += ";display:" + (index === 0 ? "block" : "none") + ";width:100%;height:clamp(230px, 27vw, 310px);object-fit:contain;background:#07101c";
     });
     let index = 0;
     setInterval(() => {
