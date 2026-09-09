@@ -16,7 +16,7 @@
         z-index: 200;
     }
     .sidebar .brand, .sidebar-bottom { display: none; }
-    .sidebar-nav { height: 100%; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; }
+    .sidebar-nav { height: 100%; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; }
     .nav-item { min-width: 0; height: 100%; justify-content: center; flex-direction: column; gap: 2px; padding: 5px 2px; border-radius: 14px; font-size: 9px; }
     .nav-icon { height: 19px; width: auto; font-size: 17px; line-height: 19px; }
     .nav-item.active { background: var(--primary); color: #07140c; }
