@@ -93,3 +93,21 @@ class WithdrawalDetailsForm(forms.ModelForm):
             choices=list(WithdrawalNetwork.objects.filter(is_enabled=True).values_list("code", "name")) or [("TRC20", "TRC20")],
             initial=self.instance.withdrawal_network,
         )
+
+
+class TotpCodeForm(forms.Form):
+    code = forms.CharField(label="Authenticator code", min_length=6, max_length=6, widget=forms.TextInput(attrs={"autocomplete": "one-time-code", "inputmode": "numeric", "pattern": "[0-9]*", "placeholder": "123456"}))
+
+    def clean_code(self):
+        code = "".join(self.cleaned_data["code"].split())
+        if not code.isdigit() or len(code) != 6:
+            raise forms.ValidationError("Enter the current 6-digit authenticator code.")
+        return code
+
+
+class RecoveryCodeForm(forms.Form):
+    code = forms.CharField(label="Recovery code", max_length=16, widget=forms.TextInput(attrs={"autocomplete": "one-time-code", "autocapitalize": "characters", "placeholder": "A7K9-X2PM"}))
+
+
+class DisableTwoFactorForm(TotpCodeForm):
+    password = forms.CharField(label="Current password", widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}))
