@@ -33,7 +33,7 @@ def issue_code(user, purpose=EmailVerificationCode.Purpose.LOGIN):
     is_reset = purpose == EmailVerificationCode.Purpose.PASSWORD_RESET
     try:
         send_mail(
-            "CloudD 1 password reset code" if is_reset else "CloudD 1 security verification code",
+            "Your CloudD 1 password reset code" if is_reset else "Your CloudD 1 verification code",
             f"Hello {name},\n\nYour CloudD 1 {'password reset' if is_reset else 'verification'} code is:\n\n{code}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, you can safely ignore this email.\n\nDo not share this code with anyone.\n\nRegards,\nCloudD 1",
             settings.DEFAULT_FROM_EMAIL,
             [user.email],

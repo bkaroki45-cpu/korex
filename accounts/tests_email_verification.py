@@ -63,7 +63,7 @@ class EmailVerificationTests(TestCase):
         from .email_verification import issue_code
         issue_code(self.user)
         self.assertEqual(len(mail.outbox), 1)
-        self.assertIn("CloudD 1 security verification code", mail.outbox[0].subject)
+        self.assertIn("Your CloudD 1 verification code", mail.outbox[0].subject)
         self.assertIn("expires in 10 minutes", mail.outbox[0].body)
 
     def test_password_reset_uses_a_separate_code_and_changes_password(self):
