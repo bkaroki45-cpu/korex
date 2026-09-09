@@ -21,31 +21,32 @@ def _token_hash(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def issue_code(user):
+def issue_code(user, purpose=EmailVerificationCode.Purpose.LOGIN):
     """Invalidate prior codes and send a freshly generated code. Never log it."""
     if not settings.DEBUG and (not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD or not settings.DEFAULT_FROM_EMAIL):
         raise RuntimeError("Email verification is not configured. Please contact support.")
     code = f"{secrets.randbelow(1_000_000):06d}"
     with transaction.atomic():
-        EmailVerificationCode.objects.filter(user=user, used_at__isnull=True).update(used_at=timezone.now())
-        EmailVerificationCode.objects.create(user=user, code_hash=make_password(code), expires_at=timezone.now() + CODE_LIFETIME)
+        EmailVerificationCode.objects.filter(user=user, purpose=purpose, used_at__isnull=True).update(used_at=timezone.now())
+        EmailVerificationCode.objects.create(user=user, purpose=purpose, code_hash=make_password(code), expires_at=timezone.now() + CODE_LIFETIME)
     name = user.get_full_name() or user.first_name or "there"
+    is_reset = purpose == EmailVerificationCode.Purpose.PASSWORD_RESET
     try:
         send_mail(
-            "CloudD 1 security verification code",
-            f"Hello {name},\n\nYour CloudD 1 verification code is:\n\n{code}\n\nThis code expires in 10 minutes.\n\nIf you did not attempt to sign in, please secure your account immediately.\n\nDo not share this code with anyone.\n\nRegards,\nCloudD 1",
+            "CloudD 1 password reset code" if is_reset else "CloudD 1 security verification code",
+            f"Hello {name},\n\nYour CloudD 1 {'password reset' if is_reset else 'verification'} code is:\n\n{code}\n\nThis code expires in 10 minutes.\n\nIf you did not request this, you can safely ignore this email.\n\nDo not share this code with anyone.\n\nRegards,\nCloudD 1",
             settings.DEFAULT_FROM_EMAIL,
             [user.email],
             fail_silently=False,
         )
     except SMTPException as error:
-        EmailVerificationCode.objects.filter(user=user, used_at__isnull=True).update(used_at=timezone.now())
+        EmailVerificationCode.objects.filter(user=user, purpose=purpose, used_at__isnull=True).update(used_at=timezone.now())
         raise RuntimeError("We could not send a verification email right now. Please try again later.") from error
 
 
 @transaction.atomic
-def verify_code(user, code):
-    verification = EmailVerificationCode.objects.select_for_update().filter(user=user, used_at__isnull=True).order_by("-created_at").first()
+def verify_code(user, code, purpose=EmailVerificationCode.Purpose.LOGIN):
+    verification = EmailVerificationCode.objects.select_for_update().filter(user=user, purpose=purpose, used_at__isnull=True).order_by("-created_at").first()
     if not verification or verification.expires_at <= timezone.now() or verification.attempts >= 5:
         return False
     if not check_password(code, verification.code_hash):
@@ -54,7 +55,7 @@ def verify_code(user, code):
         return False
     verification.used_at = timezone.now()
     verification.save(update_fields=["used_at"])
-    if not user.is_verified:
+    if purpose == EmailVerificationCode.Purpose.LOGIN and not user.is_verified:
         user.is_verified = True
         user.save(update_fields=["is_verified"])
     return True

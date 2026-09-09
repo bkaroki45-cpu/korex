@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, SetPasswordForm, UserCreationForm
 
 from .models import User
 
@@ -102,4 +102,21 @@ class EmailVerificationCodeForm(forms.Form):
         code = "".join(self.cleaned_data["code"].split())
         if not code.isdigit() or len(code) != 6:
             raise forms.ValidationError("Enter the 6-digit verification code from your email.")
+        return code
+
+
+class PasswordResetRequestForm(forms.Form):
+    email = forms.EmailField(label="Email address", widget=forms.EmailInput(attrs={"autocomplete": "email", "placeholder": "you@example.com"}))
+
+    def clean_email(self):
+        return self.cleaned_data["email"].strip().lower()
+
+
+class PasswordResetCodeForm(SetPasswordForm):
+    code = forms.CharField(label="Reset code", min_length=6, max_length=6, widget=forms.TextInput(attrs={"autocomplete": "one-time-code", "inputmode": "numeric", "pattern": "[0-9]*", "placeholder": "123456"}))
+
+    def clean_code(self):
+        code = "".join(self.cleaned_data["code"].split())
+        if not code.isdigit() or len(code) != 6:
+            raise forms.ValidationError("Enter the 6-digit code from your email.")
         return code

@@ -17,7 +17,7 @@ from .email_verification import (
     TRUSTED_DEVICE_COOKIE, clear_trusted_device_cookie, create_trusted_device,
     issue_code, set_trusted_device_cookie, trusted_device_for_request, verify_code,
 )
-from .forms import EmailAuthenticationForm, EmailVerificationCodeForm, SignUpForm, WithdrawalDetailsForm
+from .forms import EmailAuthenticationForm, EmailVerificationCodeForm, PasswordResetCodeForm, PasswordResetRequestForm, SignUpForm, WithdrawalDetailsForm
 from .kyc import apply_webhook_event, create_didit_session, verification_for, verify_webhook_signature
 from .models import EmailVerificationCode, TrustedDevice
 from .security import clear_failures, is_locked, register_failure
@@ -26,7 +26,9 @@ PENDING_EMAIL_USER = "pending_email_verification_user_id"
 PENDING_EMAIL_NEXT = "pending_email_verification_next"
 PENDING_EMAIL_AT = "pending_email_verification_at"
 PENDING_EMAIL_MAX_AGE_SECONDS = 900
-RESEND_COOLDOWN = timedelta(seconds=60)
+RESEND_COOLDOWN = timedelta(minutes=10)
+PENDING_RESET_USER = "pending_password_reset_user_id"
+PENDING_RESET_AT = "pending_password_reset_at"
 
 
 def _safe_next(request, value):
@@ -46,6 +48,27 @@ def _pending_user(request):
         request.session.pop(PENDING_EMAIL_USER, None)
         return None
     return get_user_model().objects.filter(pk=user_id, is_active=True).first()
+
+
+def _set_pending_reset(request, user):
+    request.session.cycle_key()
+    request.session[PENDING_RESET_USER] = user.pk
+    request.session[PENDING_RESET_AT] = timezone.now().timestamp()
+
+
+def _pending_reset_user(request):
+    user_id, created_at = request.session.get(PENDING_RESET_USER), request.session.get(PENDING_RESET_AT)
+    if not user_id or not created_at or timezone.now().timestamp() - created_at > PENDING_EMAIL_MAX_AGE_SECONDS:
+        request.session.pop(PENDING_RESET_USER, None)
+        request.session.pop(PENDING_RESET_AT, None)
+        return None
+    return get_user_model().objects.filter(pk=user_id, is_active=True).first()
+
+
+def _code_context(user, purpose):
+    latest = EmailVerificationCode.objects.filter(user=user, purpose=purpose, used_at__isnull=True).order_by("-created_at").first()
+    expiry = latest.expires_at if latest else timezone.now() + RESEND_COOLDOWN
+    return {"code_expires_at": expiry, "resend_available_at": expiry}
 
 
 def _complete_email_login(request, user):
@@ -126,7 +149,7 @@ def email_verification(request):
         else:
             register_failure(request, "email_code", user.pk)
             form.add_error("code", "That code is invalid, expired, or has already been used.")
-    return render(request, "accounts/email_verification.html", {"form": form, "email": user.email})
+    return render(request, "accounts/email_verification.html", {"form": form, "email": user.email, **_code_context(user, EmailVerificationCode.Purpose.LOGIN)})
 
 
 @require_POST
@@ -134,9 +157,9 @@ def resend_email_verification(request):
     user = _pending_user(request)
     if not user:
         return redirect("login")
-    latest = EmailVerificationCode.objects.filter(user=user).order_by("-created_at").first()
+    latest = EmailVerificationCode.objects.filter(user=user, purpose=EmailVerificationCode.Purpose.LOGIN).order_by("-created_at").first()
     if latest and latest.created_at > timezone.now() - RESEND_COOLDOWN:
-        messages.error(request, "Please wait one minute before requesting another code.")
+        messages.error(request, "Please wait until the 10-minute code timer finishes before requesting another code.")
     else:
         try:
             issue_code(user)
@@ -145,6 +168,65 @@ def resend_email_verification(request):
         else:
             messages.success(request, "A new verification code has been sent. Your previous code no longer works.")
     return redirect("email_verification")
+
+
+def password_reset_request(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+    form = PasswordResetRequestForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        email = form.cleaned_data["email"]
+        user = get_user_model().objects.filter(email__iexact=email, is_active=True).first()
+        if user:
+            _set_pending_reset(request, user)
+            try:
+                issue_code(user, EmailVerificationCode.Purpose.PASSWORD_RESET)
+            except RuntimeError as error:
+                form.add_error(None, str(error))
+                return render(request, "accounts/password_reset_request.html", {"form": form})
+            return redirect("password_reset_confirm")
+        messages.success(request, "If that email belongs to an account, a reset code has been sent.")
+        return redirect("login")
+    return render(request, "accounts/password_reset_request.html", {"form": form})
+
+
+def password_reset_confirm(request):
+    user = _pending_reset_user(request)
+    if not user:
+        return redirect("password_reset_request")
+    form = PasswordResetCodeForm(user, request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        if is_locked(request, "password_reset_code", user.pk):
+            form.add_error(None, "Too many attempts. Please wait 10 minutes before trying again.")
+        elif verify_code(user, form.cleaned_data["code"], EmailVerificationCode.Purpose.PASSWORD_RESET):
+            clear_failures(request, "password_reset_code", user.pk)
+            form.save()
+            request.session.pop(PENDING_RESET_USER, None)
+            request.session.pop(PENDING_RESET_AT, None)
+            messages.success(request, "Your password has been changed. Please sign in with your new password.")
+            return redirect("login")
+        else:
+            register_failure(request, "password_reset_code", user.pk)
+            form.add_error("code", "That code is invalid, expired, or has already been used.")
+    return render(request, "accounts/password_reset_confirm.html", {"form": form, "email": user.email, **_code_context(user, EmailVerificationCode.Purpose.PASSWORD_RESET)})
+
+
+@require_POST
+def resend_password_reset_code(request):
+    user = _pending_reset_user(request)
+    if not user:
+        return redirect("password_reset_request")
+    latest = EmailVerificationCode.objects.filter(user=user, purpose=EmailVerificationCode.Purpose.PASSWORD_RESET).order_by("-created_at").first()
+    if latest and latest.created_at > timezone.now() - RESEND_COOLDOWN:
+        messages.error(request, "Please wait until the 10-minute code timer finishes before requesting another code.")
+    else:
+        try:
+            issue_code(user, EmailVerificationCode.Purpose.PASSWORD_RESET)
+        except RuntimeError as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, "A new reset code has been sent. Your previous code no longer works.")
+    return redirect("password_reset_confirm")
 
 
 @login_required

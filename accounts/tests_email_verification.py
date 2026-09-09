@@ -52,7 +52,7 @@ class EmailVerificationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         EmailVerificationCode.objects.filter(user=self.user).delete()
         old = self._pending_code("222222")
-        EmailVerificationCode.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(minutes=2))
+        EmailVerificationCode.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(minutes=11))
         response = self.client.post(reverse("resend_email_verification"))
         self.assertRedirects(response, reverse("email_verification"))
         old.refresh_from_db()
@@ -65,3 +65,29 @@ class EmailVerificationTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertIn("CloudD 1 security verification code", mail.outbox[0].subject)
         self.assertIn("expires in 10 minutes", mail.outbox[0].body)
+
+    def test_password_reset_uses_a_separate_code_and_changes_password(self):
+        from .email_verification import issue_code
+        issue_code(self.user, EmailVerificationCode.Purpose.PASSWORD_RESET)
+        reset_code = EmailVerificationCode.objects.get(user=self.user, purpose=EmailVerificationCode.Purpose.PASSWORD_RESET)
+        # Test the full code entry path without exposing the random code in mail logs.
+        reset_code.code_hash = make_password("654321")
+        reset_code.save(update_fields=["code_hash"])
+        response = self.client.post(reverse("password_reset_request"), {"email": self.user.email})
+        self.assertRedirects(response, reverse("password_reset_confirm"))
+        # The request issues a fresh code, which is substituted with a known test value.
+        reset_code = EmailVerificationCode.objects.filter(user=self.user, purpose=EmailVerificationCode.Purpose.PASSWORD_RESET, used_at__isnull=True).latest("created_at")
+        reset_code.code_hash = make_password("654321")
+        reset_code.save(update_fields=["code_hash"])
+        response = self.client.post(reverse("password_reset_confirm"), {"code": "654321", "new_password1": "New-safe-password-123", "new_password2": "New-safe-password-123"})
+        self.assertRedirects(response, reverse("login"))
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("New-safe-password-123"))
+
+    @patch("accounts.views.issue_code")
+    def test_password_reset_resend_is_locked_until_code_expires(self, issue):
+        self.client.post(reverse("password_reset_request"), {"email": self.user.email})
+        EmailVerificationCode.objects.create(user=self.user, purpose=EmailVerificationCode.Purpose.PASSWORD_RESET, code_hash=make_password("123456"), expires_at=timezone.now() + timedelta(minutes=10))
+        response = self.client.post(reverse("resend_password_reset_code"))
+        self.assertRedirects(response, reverse("password_reset_confirm"))
+        issue.assert_called_once_with(self.user, EmailVerificationCode.Purpose.PASSWORD_RESET)

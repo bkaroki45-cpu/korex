@@ -108,7 +108,12 @@ class AuthenticationThrottle(models.Model):
 
 
 class EmailVerificationCode(models.Model):
+    class Purpose(models.TextChoices):
+        LOGIN = "login", "Sign in"
+        PASSWORD_RESET = "password_reset", "Password reset"
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="email_verification_codes")
+    purpose = models.CharField(max_length=24, choices=Purpose.choices, default=Purpose.LOGIN)
     code_hash = models.CharField(max_length=256)
     expires_at = models.DateTimeField(db_index=True)
     attempts = models.PositiveSmallIntegerField(default=0)
@@ -116,7 +121,7 @@ class EmailVerificationCode(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        indexes = [models.Index(fields=["user", "used_at", "expires_at"], name="accounts_ev_user_id_7aa99a_idx")]
+        indexes = [models.Index(fields=["user", "purpose", "used_at", "expires_at"], name="accounts_ev_usrprp_98d2c1_idx")]
 
 
 class TrustedDevice(models.Model):
