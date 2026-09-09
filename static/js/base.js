@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const duplicate = track.querySelector('.banner-set[aria-hidden="true"]');
     if (duplicate) duplicate.style.display = "none";
     slides.forEach((slide, index) => {
-        slide.style.cssText += ";display:" + (index === 0 ? "block" : "none") + ";width:100%;height:clamp(230px, 27vw, 310px);object-fit:contain;background:#07101c";
+        slide.style.cssText += ";display:" + (index === 0 ? "block" : "none") + ";width:100%;height:clamp(230px, 27vw, 310px);object-fit:contain;background-color:#07101c;background-image:linear-gradient(rgba(7,16,28,.22),rgba(7,16,28,.22)),url('" + slide.currentSrc + "');background-size:cover;background-position:center";
     });
     let index = 0;
     setInterval(() => {
