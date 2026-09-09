@@ -1,6 +1,7 @@
 """Brevo email verification and cryptographic trusted-device helpers."""
 import hashlib
 import secrets
+from smtplib import SMTPException
 from datetime import timedelta
 
 from django.conf import settings
@@ -29,13 +30,17 @@ def issue_code(user):
         EmailVerificationCode.objects.filter(user=user, used_at__isnull=True).update(used_at=timezone.now())
         EmailVerificationCode.objects.create(user=user, code_hash=make_password(code), expires_at=timezone.now() + CODE_LIFETIME)
     name = user.get_full_name() or user.first_name or "there"
-    send_mail(
-        "CloudD 1 security verification code",
-        f"Hello {name},\n\nYour CloudD 1 verification code is:\n\n{code}\n\nThis code expires in 10 minutes.\n\nIf you did not attempt to sign in, please secure your account immediately.\n\nDo not share this code with anyone.\n\nRegards,\nCloudD 1",
-        settings.DEFAULT_FROM_EMAIL,
-        [user.email],
-        fail_silently=False,
-    )
+    try:
+        send_mail(
+            "CloudD 1 security verification code",
+            f"Hello {name},\n\nYour CloudD 1 verification code is:\n\n{code}\n\nThis code expires in 10 minutes.\n\nIf you did not attempt to sign in, please secure your account immediately.\n\nDo not share this code with anyone.\n\nRegards,\nCloudD 1",
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+    except SMTPException as error:
+        EmailVerificationCode.objects.filter(user=user, used_at__isnull=True).update(used_at=timezone.now())
+        raise RuntimeError("We could not send a verification email right now. Please try again later.") from error
 
 
 @transaction.atomic
