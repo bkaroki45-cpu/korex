@@ -5,50 +5,46 @@ function toggleSidebar() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    const viewport = document.querySelector(".banner-viewport");
     const track = document.querySelector(".banner-track");
     const firstSet = document.querySelector(".banner-set");
-    if (!track || !firstSet) return;
+    const secondSet = track?.querySelector('.banner-set[aria-hidden="true"]');
+    if (!viewport || !track || !firstSet || !secondSet) return;
 
-    const slides = Array.from(firstSet.querySelectorAll("img"));
-    if (slides.length < 2) return;
-    track.style.animation = "none";
-    track.style.width = "100%";
-    track.style.transition = "transform 650ms cubic-bezier(.22,.61,.36,1)";
-    firstSet.style.cssText = "display:flex; flex:0 0 100%; gap:0; padding:0";
-    const duplicate = track.querySelector('.banner-set[aria-hidden="true"]');
-    if (duplicate) duplicate.style.display = "none";
-    const setBackdrop = (slide) => {
-        firstSet.style.backgroundImage = "linear-gradient(rgba(7,16,28,.42),rgba(7,16,28,.42)),url('" + slide.src + "')";
-        firstSet.style.backgroundPosition = "center";
-        firstSet.style.backgroundSize = "cover";
-    };
-    slides.forEach((slide, index) => {
-        slide.style.cssText += ";display:" + (index === 0 ? "block" : "none") + ";width:100%;height:clamp(230px, 27vw, 310px);object-fit:contain;background:transparent";
-    });
-    setBackdrop(slides[0]);
-    let index = 0;
-    setInterval(() => {
-        const current = slides[index];
-        index = (index + 1) % slides.length;
-        const next = slides[index];
-        setBackdrop(next);
-        next.style.display = "block";
-        next.style.position = "absolute";
-        next.style.inset = "0";
-        next.style.transform = "translateX(100%)";
-        next.style.transition = "transform 650ms cubic-bezier(.22,.61,.36,1)";
-        firstSet.style.position = "relative";
-        requestAnimationFrame(() => {
-            current.style.transform = "translateX(-100%)";
-            current.style.transition = "transform 650ms cubic-bezier(.22,.61,.36,1)";
-            next.style.transform = "translateX(0)";
+    const allSlides = [...firstSet.querySelectorAll("img"), ...secondSet.querySelectorAll("img")];
+    const slideCount = firstSet.querySelectorAll("img").length;
+    if (slideCount < 2) return;
+    let position = 0;
+    let step = 0;
+
+    const layout = () => {
+        const cardsVisible = window.innerWidth <= 700 ? 1 : 3;
+        const gap = window.innerWidth <= 700 ? 12 : 16;
+        const padding = window.innerWidth <= 700 ? 18 : 32;
+        const cardWidth = Math.floor((viewport.clientWidth - padding - gap * (cardsVisible - 1)) / cardsVisible);
+        const cardHeight = Math.round(cardWidth * 2 / 3);
+        step = cardWidth + gap;
+        track.style.cssText = "display:flex;width:max-content;animation:none;transform:translateX(" + position + "px);transition:transform 650ms cubic-bezier(.22,.61,.36,1)";
+        [firstSet, secondSet].forEach((set) => {
+            set.style.cssText = "display:flex;flex:0 0 auto;gap:" + gap + "px;padding:" + (window.innerWidth <= 700 ? "9px" : "12px 16px") + "px";
         });
-        setTimeout(() => {
-            current.style.display = "none";
-            current.style.transform = "";
-            current.style.transition = "";
-            next.style.position = "";
-            next.style.inset = "";
-        }, 680);
+        allSlides.forEach((slide) => {
+            slide.style.cssText = "display:block;width:" + cardWidth + "px;height:" + cardHeight + "px;object-fit:contain;background:#07101c;border-radius:12px;box-shadow:0 8px 25px #0008";
+        });
+    };
+
+    layout();
+    window.addEventListener("resize", () => { position = 0; layout(); });
+    window.setInterval(() => {
+        position -= step;
+        track.style.transform = "translateX(" + position + "px)";
+        if (Math.abs(position) >= step * slideCount) {
+            window.setTimeout(() => {
+                track.style.transition = "none";
+                position = 0;
+                track.style.transform = "translateX(0)";
+                window.requestAnimationFrame(() => { track.style.transition = "transform 650ms cubic-bezier(.22,.61,.36,1)"; });
+            }, 680);
+        }
     }, 3000);
 });
