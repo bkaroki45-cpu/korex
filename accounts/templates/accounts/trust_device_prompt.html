@@ -1,0 +1,9 @@
+{% extends "accounts/auth_base.html" %}
+{% block title %}Trust this device? | CLOUDD 1{% endblock %}
+{% block auth_content %}
+<span class="eyebrow">DEVICE SECURITY</span><h1>Trust this device?</h1>
+<p>Would you like CLOUDD 1 to remember this browser for 30 days? A trusted browser can sign in without another email code after you enter your password.</p>
+<p class="help">Choose Yes only on a personal device you control. You can revoke trusted devices anytime from Security settings.</p>
+<form method="post">{% csrf_token %}<input type="hidden" name="choice" value="yes"><button type="submit">Yes, trust this device</button></form>
+<form method="post">{% csrf_token %}<input type="hidden" name="choice" value="no"><p class="auth-switch"><button type="submit" class="link-button">No, ask me for a code next time</button></p></form>
+{% endblock %}

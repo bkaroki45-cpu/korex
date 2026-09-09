@@ -29,6 +29,8 @@ PENDING_EMAIL_MAX_AGE_SECONDS = 900
 RESEND_COOLDOWN = timedelta(minutes=10)
 PENDING_RESET_USER = "pending_password_reset_user_id"
 PENDING_RESET_AT = "pending_password_reset_at"
+PENDING_TRUST_CHOICE = "pending_trust_device_choice"
+PENDING_TRUST_NEXT = "pending_trust_device_next"
 
 
 def _safe_next(request, value):
@@ -76,10 +78,9 @@ def _complete_email_login(request, user):
     request.session.pop(PENDING_EMAIL_USER, None)
     request.session.pop(PENDING_EMAIL_AT, None)
     login(request, user)
-    _, token = create_trusted_device(user, request)
-    response = redirect(destination)
-    set_trusted_device_cookie(response, token)
-    return response
+    request.session[PENDING_TRUST_CHOICE] = True
+    request.session[PENDING_TRUST_NEXT] = destination
+    return redirect("trust_device_prompt")
 
 
 def signup(request):
@@ -168,6 +169,24 @@ def resend_email_verification(request):
         else:
             messages.success(request, "A new verification code has been sent. Your previous code no longer works.")
     return redirect("email_verification")
+
+
+@login_required
+def trust_device_prompt(request):
+    """Ask the user before creating a persistent browser-trust credential."""
+    if not request.session.get(PENDING_TRUST_CHOICE):
+        return redirect("dashboard")
+    if request.method == "POST":
+        destination = request.session.pop(PENDING_TRUST_NEXT, "dashboard")
+        request.session.pop(PENDING_TRUST_CHOICE, None)
+        if request.POST.get("choice") == "yes":
+            _, token = create_trusted_device(request.user, request)
+            response = redirect(destination)
+            set_trusted_device_cookie(response, token)
+            messages.success(request, "This browser is trusted for 30 days. You can revoke it from Security at any time.")
+            return response
+        return redirect(destination)
+    return render(request, "accounts/trust_device_prompt.html")
 
 
 def password_reset_request(request):

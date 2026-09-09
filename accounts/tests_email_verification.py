@@ -30,11 +30,23 @@ class EmailVerificationTests(TestCase):
         send_code.assert_called_once_with(self.user)
         self._pending_code()
         response = self.client.post(reverse("email_verification"), {"code": "123456"})
-        self.assertRedirects(response, reverse("dashboard"))
+        self.assertRedirects(response, reverse("trust_device_prompt"))
         self.user.refresh_from_db()
         self.assertTrue(self.user.is_verified)
+        self.assertEqual(TrustedDevice.objects.filter(user=self.user).count(), 0)
+        response = self.client.post(reverse("trust_device_prompt"), {"choice": "yes"})
+        self.assertRedirects(response, reverse("dashboard"))
         self.assertEqual(TrustedDevice.objects.filter(user=self.user).count(), 1)
         self.assertIn("cloudd1_trusted_device", response.cookies)
+
+    @patch("accounts.views.issue_code")
+    def test_user_can_decline_to_trust_browser(self, send_code):
+        self.client.post(reverse("login"), {"username": self.user.email, "password": self.password})
+        self._pending_code()
+        self.client.post(reverse("email_verification"), {"code": "123456"})
+        response = self.client.post(reverse("trust_device_prompt"), {"choice": "no"})
+        self.assertRedirects(response, reverse("dashboard"))
+        self.assertFalse(TrustedDevice.objects.filter(user=self.user).exists())
 
     @patch("accounts.views.issue_code")
     def test_trusted_device_skips_email_code(self, send_code):

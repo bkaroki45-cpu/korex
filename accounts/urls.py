@@ -13,6 +13,7 @@ urlpatterns = [
     path("two-factor/", views.two_factor_security, name="two_factor_security"),
     path("verify-email/", views.email_verification, name="email_verification"),
     path("verify-email/resend/", views.resend_email_verification, name="resend_email_verification"),
+    path("trust-device/", views.trust_device_prompt, name="trust_device_prompt"),
     path("two-factor/devices/<int:device_id>/revoke/", views.revoke_trusted_device, name="revoke_trusted_device"),
     path("two-factor/devices/revoke-others/", views.revoke_other_trusted_devices, name="revoke_other_trusted_devices"),
     path("kyc/", views.kyc, name="kyc"),
