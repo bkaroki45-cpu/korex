@@ -1,10 +1,11 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from .models import User
 from referrals.models import ReferralProfile
 
 
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend", EMAIL_HOST_USER="brevo-user", EMAIL_HOST_PASSWORD="brevo-key", DEFAULT_FROM_EMAIL="no-reply@example.com")
 class AuthenticationFlowTests(TestCase):
     def test_signup_creates_user_wallet_and_redirects_to_dashboard(self):
         response = self.client.post(reverse("signup"), {
@@ -12,7 +13,7 @@ class AuthenticationFlowTests(TestCase):
             "country": "KE", "dial_code": "+254", "phone_local": "712345678",
             "password1": "VeryStrongPassword123!", "password2": "VeryStrongPassword123!",
         })
-        self.assertRedirects(response, reverse("dashboard"))
+        self.assertRedirects(response, reverse("email_verification"))
         user = User.objects.get(email="ada@gmail.com")
         self.assertEqual(user.phone_number, "+254712345678")
         self.assertTrue(user.account_id.startswith("CDD-"))
@@ -23,7 +24,7 @@ class AuthenticationFlowTests(TestCase):
     def test_user_can_log_in_with_email_and_password(self):
         User.objects.create_user(username="ada@gmail.com", email="ada@gmail.com", password="VeryStrongPassword123!")
         response = self.client.post(reverse("login"), {"username": "ada@gmail.com", "password": "VeryStrongPassword123!"})
-        self.assertRedirects(response, reverse("dashboard"))
+        self.assertRedirects(response, reverse("email_verification"))
 
     def test_multiple_people_can_register_with_different_email_addresses(self):
         for first_name, email in (("Ada", "ada@example.com"), ("Grace", "grace@example.com")):
@@ -32,7 +33,7 @@ class AuthenticationFlowTests(TestCase):
                 "country": "KE", "dial_code": "+254", "phone_local": "712345678",
                 "password1": "VeryStrongPassword123!", "password2": "VeryStrongPassword123!",
             })
-            self.assertRedirects(response, reverse("dashboard"))
+            self.assertRedirects(response, reverse("email_verification"))
             self.client.post(reverse("logout"))
         self.assertEqual(User.objects.filter(email__in=["ada@example.com", "grace@example.com"]).count(), 2)
 

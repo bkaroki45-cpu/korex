@@ -95,28 +95,8 @@ class DiditWebhookEvent(models.Model):
         return self.event_id
 
 
-class TwoFactorSettings(models.Model):
-    """Account-bound TOTP credential. The secret is encrypted, never logged."""
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="two_factor")
-    encrypted_secret = models.TextField(blank=True)
-    is_enabled = models.BooleanField(default=False)
-    enabled_at = models.DateTimeField(null=True, blank=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return f"2FA for {self.user.email}"
-
-
-class RecoveryCode(models.Model):
-    two_factor = models.ForeignKey(TwoFactorSettings, on_delete=models.CASCADE, related_name="recovery_codes")
-    lookup_digest = models.CharField(max_length=64, db_index=True)
-    code_hash = models.CharField(max_length=256)
-    used_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-
 class AuthenticationThrottle(models.Model):
-    """Hashed identifier, used to slow repeated password/TOTP guessing."""
+    """Hashed identifier, used to slow repeated password and email-code guessing."""
     identifier_hash = models.CharField(max_length=64)
     purpose = models.CharField(max_length=24)
     failures = models.PositiveSmallIntegerField(default=0)
@@ -125,3 +105,29 @@ class AuthenticationThrottle(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=("identifier_hash", "purpose"), name="unique_auth_throttle")]
+
+
+class EmailVerificationCode(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="email_verification_codes")
+    code_hash = models.CharField(max_length=256)
+    expires_at = models.DateTimeField(db_index=True)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    used_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "used_at", "expires_at"], name="accounts_ev_user_id_7aa99a_idx")]
+
+
+class TrustedDevice(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="trusted_devices")
+    token_hash = models.CharField(max_length=64, unique=True)
+    label = models.CharField(max_length=180, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(auto_now=True)
+    expires_at = models.DateTimeField(db_index=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-last_used_at"]
+        indexes = [models.Index(fields=["user", "revoked_at", "expires_at"], name="accounts_td_user_id_f1f7fd_idx")]

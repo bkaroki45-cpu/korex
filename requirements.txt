@@ -5,6 +5,5 @@ django-cors-headers==4.9.0
 djangorestframework==3.18.0
 pillow==12.3.0
 python-dotenv==1.2.3
-cryptography>=44,<47
 sqlparse==0.6.0
 tzdata==2026.3

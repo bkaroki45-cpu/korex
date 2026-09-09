@@ -63,7 +63,6 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'accounts.middleware.TwoFactorReenrollmentMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -165,7 +164,15 @@ DIDIT_WEBHOOK_SECRET = os.getenv("DIDIT_WEBHOOK_SECRET", "")
 KYC_ENFORCEMENT_ENABLED = os.getenv("KYC_ENFORCEMENT_ENABLED", "false").lower() == "true"
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_ADMIN_CHAT_ID = os.getenv("TELEGRAM_ADMIN_CHAT_ID", "")
-TWO_FACTOR_ENCRYPTION_KEY = os.getenv("TWO_FACTOR_ENCRYPTION_KEY", "")
+
+# Brevo SMTP credentials are server secrets. Do not place them in source code.
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv("BREVO_SMTP_SERVER", "smtp-relay.brevo.com")
+EMAIL_PORT = int(os.getenv("BREVO_SMTP_PORT", "587"))
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.getenv("BREVO_SMTP_USERNAME", "")
+EMAIL_HOST_PASSWORD = os.getenv("BREVO_SMTP_KEY", "")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "")
 
 if not DEBUG:
     SESSION_COOKIE_SECURE = True

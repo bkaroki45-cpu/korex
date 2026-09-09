@@ -1,47 +1,62 @@
 import json
+from datetime import timedelta
 
+from django.contrib import messages
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.hashers import check_password
-from django.http import HttpResponseBadRequest, JsonResponse
-from django.shortcuts import redirect, render
 from django.db import transaction
+from django.http import HttpResponseBadRequest, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .forms import DisableTwoFactorForm, EmailAuthenticationForm, RecoveryCodeForm, SignUpForm, TotpCodeForm, WithdrawalDetailsForm
+from .email_verification import (
+    TRUSTED_DEVICE_COOKIE, clear_trusted_device_cookie, create_trusted_device,
+    issue_code, set_trusted_device_cookie, trusted_device_for_request, verify_code,
+)
+from .forms import EmailAuthenticationForm, EmailVerificationCodeForm, SignUpForm, WithdrawalDetailsForm
 from .kyc import apply_webhook_event, create_didit_session, verification_for, verify_webhook_signature
-from .models import TwoFactorSettings
+from .models import EmailVerificationCode, TrustedDevice
 from .security import clear_failures, is_locked, register_failure
-from .totp import decrypt_secret, encrypt_secret, generate_recovery_codes, generate_secret, use_recovery_code, verify_totp
 
-PENDING_2FA_USER = "pending_two_factor_user_id"
-PENDING_2FA_NEXT = "pending_two_factor_next"
-PENDING_2FA_AT = "pending_two_factor_at"
-PENDING_2FA_MAX_AGE_SECONDS = 300
+PENDING_EMAIL_USER = "pending_email_verification_user_id"
+PENDING_EMAIL_NEXT = "pending_email_verification_next"
+PENDING_EMAIL_AT = "pending_email_verification_at"
+PENDING_EMAIL_MAX_AGE_SECONDS = 900
+RESEND_COOLDOWN = timedelta(seconds=60)
 
 
 def _safe_next(request, value):
     return value if value and url_has_allowed_host_and_scheme(value, {request.get_host()}) else "dashboard"
 
 
+def _set_pending_verification(request, user, destination):
+    request.session.cycle_key()
+    request.session[PENDING_EMAIL_USER] = user.pk
+    request.session[PENDING_EMAIL_NEXT] = destination
+    request.session[PENDING_EMAIL_AT] = timezone.now().timestamp()
+
+
 def _pending_user(request):
-    user_id, created_at = request.session.get(PENDING_2FA_USER), request.session.get(PENDING_2FA_AT)
-    if not user_id or not created_at or timezone.now().timestamp() - created_at > PENDING_2FA_MAX_AGE_SECONDS:
-        request.session.pop(PENDING_2FA_USER, None)
+    user_id, created_at = request.session.get(PENDING_EMAIL_USER), request.session.get(PENDING_EMAIL_AT)
+    if not user_id or not created_at or timezone.now().timestamp() - created_at > PENDING_EMAIL_MAX_AGE_SECONDS:
+        request.session.pop(PENDING_EMAIL_USER, None)
         return None
     return get_user_model().objects.filter(pk=user_id, is_active=True).first()
 
 
-def _finish_two_factor_login(request, user):
-    destination = request.session.pop(PENDING_2FA_NEXT, "dashboard")
-    request.session.pop(PENDING_2FA_USER, None)
-    request.session.pop(PENDING_2FA_AT, None)
+def _complete_email_login(request, user):
+    destination = request.session.pop(PENDING_EMAIL_NEXT, "dashboard")
+    request.session.pop(PENDING_EMAIL_USER, None)
+    request.session.pop(PENDING_EMAIL_AT, None)
     login(request, user)
-    return redirect(destination)
+    _, token = create_trusted_device(user, request)
+    response = redirect(destination)
+    set_trusted_device_cookie(response, token)
+    return response
 
 
 def signup(request):
@@ -60,8 +75,13 @@ def signup(request):
                     form.add_error("referrer_code", error)
                     transaction.set_rollback(True)
                     return render(request, "accounts/signup.html", {"form": form})
-        login(request, user)
-        return redirect("dashboard")
+        _set_pending_verification(request, user, "dashboard")
+        try:
+            issue_code(user)
+        except RuntimeError as error:
+            form.add_error(None, str(error))
+            return render(request, "accounts/signup.html", {"form": form})
+        return redirect("email_verification")
     return render(request, "accounts/signup.html", {"form": form})
 
 
@@ -77,18 +97,54 @@ def login_view(request):
         if request.method == "POST" and form.is_valid():
             user = form.get_user()
             clear_failures(request, "password", email)
-            two_factor = getattr(user, "two_factor", None)
-            if two_factor and two_factor.is_enabled:
-                request.session.cycle_key()
-                request.session[PENDING_2FA_USER] = user.pk
-                request.session[PENDING_2FA_NEXT] = _safe_next(request, request.POST.get("next"))
-                request.session[PENDING_2FA_AT] = timezone.now().timestamp()
-                return redirect("two_factor_verify")
-            login(request, user)
-            return redirect(_safe_next(request, request.POST.get("next")))
+            if trusted_device_for_request(user, request):
+                login(request, user)
+                return redirect(_safe_next(request, request.POST.get("next")))
+            _set_pending_verification(request, user, _safe_next(request, request.POST.get("next")))
+            try:
+                issue_code(user)
+            except RuntimeError as error:
+                form.add_error(None, str(error))
+                return render(request, "accounts/login.html", {"form": form})
+            return redirect("email_verification")
         if request.method == "POST":
             register_failure(request, "password", email)
     return render(request, "accounts/login.html", {"form": form})
+
+
+def email_verification(request):
+    user = _pending_user(request)
+    if not user:
+        return redirect("login")
+    form = EmailVerificationCodeForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        if is_locked(request, "email_code", user.pk):
+            form.add_error(None, "Too many attempts. Please wait 10 minutes before trying again.")
+        elif verify_code(user, form.cleaned_data["code"]):
+            clear_failures(request, "email_code", user.pk)
+            return _complete_email_login(request, user)
+        else:
+            register_failure(request, "email_code", user.pk)
+            form.add_error("code", "That code is invalid, expired, or has already been used.")
+    return render(request, "accounts/email_verification.html", {"form": form, "email": user.email})
+
+
+@require_POST
+def resend_email_verification(request):
+    user = _pending_user(request)
+    if not user:
+        return redirect("login")
+    latest = EmailVerificationCode.objects.filter(user=user).order_by("-created_at").first()
+    if latest and latest.created_at > timezone.now() - RESEND_COOLDOWN:
+        messages.error(request, "Please wait one minute before requesting another code.")
+    else:
+        try:
+            issue_code(user)
+        except RuntimeError as error:
+            messages.error(request, str(error))
+        else:
+            messages.success(request, "A new verification code has been sent. Your previous code no longer works.")
+    return redirect("email_verification")
 
 
 @login_required
@@ -109,129 +165,32 @@ def account_settings(request):
 
 @login_required
 def two_factor_security(request):
-    two_factor, _ = TwoFactorSettings.objects.get_or_create(user=request.user)
-    remaining_codes = two_factor.recovery_codes.filter(used_at__isnull=True).count()
-    return render(request, "accounts/two_factor_security.html", {"two_factor": two_factor, "remaining_codes": remaining_codes})
-
-
-@login_required
-def two_factor_setup(request):
-    two_factor, _ = TwoFactorSettings.objects.get_or_create(user=request.user)
-    reenrollment = request.session.get("two_factor_reenroll_required", False)
-    needs_existing_authenticator = two_factor.is_enabled and not reenrollment
-    if needs_existing_authenticator and not request.session.get("two_factor_change_authorized"):
-        form = TotpCodeForm(request.POST or None)
-        if request.method == "POST" and form.is_valid():
-            if is_locked(request, "change_totp", request.user.pk):
-                form.add_error(None, "Too many attempts. Please wait 10 minutes before trying again.")
-            elif verify_totp(decrypt_secret(two_factor.encrypted_secret), form.cleaned_data["code"]):
-                clear_failures(request, "change_totp", request.user.pk)
-                request.session["two_factor_change_authorized"] = True
-                return redirect("two_factor_setup")
-            else:
-                register_failure(request, "change_totp", request.user.pk)
-                form.add_error("code", "That authenticator code is not valid.")
-        return render(request, "accounts/two_factor_authorize.html", {"form": form, "reenrollment": False})
-
-    secret = request.session.get("two_factor_enrollment_secret")
-    if not secret:
-        secret = generate_secret()
-        request.session["two_factor_enrollment_secret"] = secret
-    form = TotpCodeForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        if is_locked(request, "setup_totp", request.user.pk):
-            form.add_error(None, "Too many attempts. Please wait 10 minutes before trying again.")
-        elif verify_totp(secret, form.cleaned_data["code"]):
-            clear_failures(request, "setup_totp", request.user.pk)
-            two_factor.encrypted_secret = encrypt_secret(secret)
-            two_factor.is_enabled = True
-            two_factor.enabled_at = timezone.now()
-            two_factor.save(update_fields=["encrypted_secret", "is_enabled", "enabled_at", "updated_at"])
-            recovery_codes = generate_recovery_codes(two_factor)
-            request.session.pop("two_factor_enrollment_secret", None)
-            request.session.pop("two_factor_change_authorized", None)
-            request.session.pop("two_factor_reenroll_required", None)
-            request.session["new_recovery_codes"] = recovery_codes
-            return redirect("two_factor_recovery_codes")
-        else:
-            register_failure(request, "setup_totp", request.user.pk)
-            form.add_error("code", "That authenticator code is not valid. Try the current code and check your device time.")
-    return render(request, "accounts/two_factor_setup.html", {"form": form, "secret": secret, "reenrollment": reenrollment})
-
-
-def two_factor_verify(request):
-    user = _pending_user(request)
-    if not user:
-        return redirect("login")
-    two_factor = getattr(user, "two_factor", None)
-    if not two_factor or not two_factor.is_enabled:
-        return redirect("login")
-    if is_locked(request, "totp", user.pk):
-        form = TotpCodeForm()
-        form.add_error(None, "Too many attempts. Please wait 10 minutes before trying again.")
-    else:
-        form = TotpCodeForm(request.POST or None)
-        if request.method == "POST" and form.is_valid():
-            if verify_totp(decrypt_secret(two_factor.encrypted_secret), form.cleaned_data["code"]):
-                clear_failures(request, "totp", user.pk)
-                return _finish_two_factor_login(request, user)
-            register_failure(request, "totp", user.pk)
-            form.add_error("code", "That authenticator code is not valid.")
-    return render(request, "accounts/two_factor_verify.html", {"form": form})
-
-
-def two_factor_recovery_login(request):
-    user = _pending_user(request)
-    if not user:
-        return redirect("login")
-    two_factor = getattr(user, "two_factor", None)
-    form = RecoveryCodeForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        if is_locked(request, "recovery", user.pk):
-            form.add_error(None, "Too many attempts. Please wait 10 minutes before trying again.")
-        elif two_factor and use_recovery_code(two_factor, form.cleaned_data["code"]):
-            clear_failures(request, "recovery", user.pk)
-            request.session["two_factor_reenroll_required"] = True
-            _finish_two_factor_login(request, user)
-            return redirect("two_factor_setup")
-        else:
-            register_failure(request, "recovery", user.pk)
-            form.add_error("code", "That recovery code is not valid or has already been used.")
-    return render(request, "accounts/two_factor_recovery_login.html", {"form": form})
-
-
-@login_required
-def two_factor_recovery_codes(request):
-    codes = request.session.pop("new_recovery_codes", None)
-    if not codes:
-        return redirect("two_factor_security")
-    return render(request, "accounts/two_factor_recovery_codes.html", {"codes": codes})
+    current_device = trusted_device_for_request(request.user, request)
+    devices = request.user.trusted_devices.filter(revoked_at__isnull=True, expires_at__gt=timezone.now())
+    return render(request, "accounts/two_factor_security.html", {"devices": devices, "current_device": current_device})
 
 
 @login_required
 @require_POST
-def two_factor_regenerate_recovery_codes(request):
-    two_factor, _ = TwoFactorSettings.objects.get_or_create(user=request.user)
-    form = TotpCodeForm(request.POST)
-    if not two_factor.is_enabled or not form.is_valid() or not verify_totp(decrypt_secret(two_factor.encrypted_secret), form.cleaned_data["code"]):
-        messages.error(request, "Enter a valid current authenticator code to generate new recovery codes.")
-        return redirect("two_factor_security")
-    request.session["new_recovery_codes"] = generate_recovery_codes(two_factor)
-    return redirect("two_factor_recovery_codes")
+def revoke_trusted_device(request, device_id):
+    device = get_object_or_404(TrustedDevice, pk=device_id, user=request.user, revoked_at__isnull=True)
+    device.revoked_at = timezone.now()
+    device.save(update_fields=["revoked_at"])
+    response = redirect("two_factor_security")
+    if trusted_device_for_request(request.user, request) and device.pk == trusted_device_for_request(request.user, request).pk:
+        clear_trusted_device_cookie(response)
+    return response
 
 
 @login_required
 @require_POST
-def two_factor_disable(request):
-    two_factor, _ = TwoFactorSettings.objects.get_or_create(user=request.user)
-    form = DisableTwoFactorForm(request.POST)
-    if not two_factor.is_enabled or not form.is_valid() or not request.user.check_password(form.cleaned_data["password"]) or not verify_totp(decrypt_secret(two_factor.encrypted_secret), form.cleaned_data["code"]):
-        messages.error(request, "2FA was not disabled. Enter your password and a valid current authenticator code.")
-        return redirect("two_factor_security")
-    two_factor.recovery_codes.all().delete()
-    two_factor.encrypted_secret, two_factor.is_enabled, two_factor.enabled_at = "", False, None
-    two_factor.save(update_fields=["encrypted_secret", "is_enabled", "enabled_at", "updated_at"])
-    messages.success(request, "Two-factor authentication has been disabled.")
+def revoke_other_trusted_devices(request):
+    current = trusted_device_for_request(request.user, request)
+    devices = request.user.trusted_devices.filter(revoked_at__isnull=True, expires_at__gt=timezone.now())
+    if current:
+        devices = devices.exclude(pk=current.pk)
+    devices.update(revoked_at=timezone.now())
+    messages.success(request, "All other trusted devices have been revoked.")
     return redirect("two_factor_security")
 
 
@@ -244,10 +203,7 @@ def kyc(request):
 @require_POST
 def start_kyc(request):
     try:
-        session = create_didit_session(
-            user=request.user,
-            callback_url=request.build_absolute_uri(reverse("kyc_done")),
-        )
+        session = create_didit_session(user=request.user, callback_url=request.build_absolute_uri(reverse("kyc_done")))
     except ValueError as error:
         return JsonResponse({"detail": str(error)}, status=503)
     return JsonResponse(session)
