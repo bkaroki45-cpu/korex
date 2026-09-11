@@ -23,6 +23,13 @@ def dashboard(request):
         user=request.user,
         defaults={"referral_code": new_referral_code()},
     )
+    deposit_config = PlatformConfiguration.current()
+    guides = [
+        {"theme": "deposit", "icon": "↓", "eyebrow": "01 · FUND YOUR WALLET", "title": "Start with ${:,.0f} USDT".format(deposit_config.minimum_deposit), "steps": ["Send USDT on the correct network", "Submit your amount and TxID", "Admin verifies before wallet credit"]},
+        {"theme": "signals", "icon": "↗", "eyebrow": "02 · COPY SIGNALS", "title": "30 minutes to act", "steps": ["Review the live entry and target", "Choose your locked trade balance", "Copy before the signal window closes"]},
+        {"theme": "rewards", "icon": "✦", "eyebrow": "03 · TRACK REWARDS", "title": "Clear trade outcomes", "steps": ["Each signal shows its stated target", "Settled results appear in activity", "Available rewards move to your wallet"]},
+        {"theme": "referrals", "icon": "◎", "eyebrow": "04 · GROW YOUR NETWORK", "title": "Invite with one link", "steps": ["Share your personal referral link", "Your invitee completes a qualifying deposit", "Follow network activity in Profile"]},
+    ]
     return render(request, "dashboard/dashboard.html", {
         "wallet": request.user.wallet,
         # This is the same wallet field enforced by the withdrawal service.
@@ -34,7 +41,8 @@ def dashboard(request):
         "transactions": Transaction.objects.filter(user=request.user).order_by("-created_at")[:5],
         "completed_today": request.user.earning_sessions.filter(session_date=today, status="SETTLED").count(),
         "news": get_market_news() or [],
-        "deposit_config": PlatformConfiguration.current(),
+        "deposit_config": deposit_config,
+        "guides": guides,
         "withdrawal_details_complete": bool(request.user.withdrawal_address and request.user.withdrawal_network),
         "kyc_verified": is_kyc_verified(request.user),
     })

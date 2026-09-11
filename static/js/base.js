@@ -11,8 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const secondSet = track?.querySelector('.banner-set[aria-hidden="true"]');
     if (!viewport || !track || !firstSet || !secondSet) return;
 
-    const allSlides = [...firstSet.querySelectorAll("img"), ...secondSet.querySelectorAll("img")];
-    const slideCount = firstSet.querySelectorAll("img").length;
+    const allSlides = [...firstSet.children, ...secondSet.children];
+    const slideCount = firstSet.children.length;
     if (slideCount < 2) return;
     let position = 0;
     let step = 0;
@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
             set.style.cssText = "display:flex;flex:0 0 auto;gap:" + gap + "px;padding:" + (window.innerWidth <= 700 ? "9px" : "12px 16px") + "px";
         });
         allSlides.forEach((slide) => {
-            slide.style.cssText = "display:block;width:" + cardWidth + "px;height:" + cardHeight + "px;object-fit:contain;background:#07101c;border-radius:12px;box-shadow:0 8px 25px #0008";
+            slide.style.cssText = "display:block;flex:0 0 auto;width:" + cardWidth + "px;height:" + cardHeight + "px";
         });
     };
 

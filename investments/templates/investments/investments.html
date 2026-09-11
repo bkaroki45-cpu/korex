@@ -12,11 +12,11 @@
   <a class="copy-wallet-link" href="{% url 'wallet:deposit_crypto' %}">Fund wallet</a>
 </div>
 <section class="copy-summary">
-  <article><span>Active signals</span><strong>{{ signals|length }}</strong><small>Visible for 15 minutes</small></article>
+  <article><span>Active signals</span><strong>{{ signals|length }}</strong><small>Visible for 30 minutes</small></article>
   <article><span>Signal activity</span><strong>{{ traded_count }} traded · {{ missed_count }} missed</strong><small>Your complete record below</small></article>
 </section>
 <section class="copy-section">
-  <div class="copy-section-heading"><div><span class="copy-kicker">LIVE NOW</span><h2>Signals ready to copy</h2></div><span class="window-note">Auto-removes after 15 minutes</span></div>
+  <div class="copy-section-heading"><div><span class="copy-kicker">LIVE NOW</span><h2>Signals ready to copy</h2></div><span class="window-note">Auto-removes after 30 minutes</span></div>
   {% if signals %}
   <div class="signal-grid" data-server-now-epoch-ms="{{ server_now_epoch_ms }}" data-signal-window-seconds="{{ signal_window_seconds }}">
     {% for signal in signals %}
@@ -39,7 +39,7 @@
     {% endfor %}
   </div>
   {% else %}
-  <div class="copy-empty"><h3>No active signals</h3><p>Signals remain visible for 15 minutes and automatically move to activity when they expire.</p></div>
+  <div class="copy-empty"><h3>No active signals</h3><p>Signals remain visible for 30 minutes and automatically move to activity when they expire.</p></div>
   {% endif %}
 </section>
 <section class="copy-section">
@@ -58,7 +58,7 @@
 (() => {
   const signalGrid = document.querySelector('[data-server-now-epoch-ms]');
   const serverNowEpochMs = Number(signalGrid?.dataset.serverNowEpochMs || 0);
-  const signalWindowMs = Number(signalGrid?.dataset.signalWindowSeconds || 900) * 1000;
+  const signalWindowMs = Number(signalGrid?.dataset.signalWindowSeconds || 1800) * 1000;
   const browserStart = performance.now();
   const serverNow = () => serverNowEpochMs + (performance.now() - browserStart);
   let refreshScheduled = false;
