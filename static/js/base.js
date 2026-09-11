@@ -16,6 +16,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (slideCount < 2) return;
     let position = 0;
     let step = 0;
+    let activeIndex = 0;
+    let resetTimer;
+    const dots = [...document.querySelectorAll(".guide-dots button")];
+    const updateDots = () => dots.forEach((dot, index) => dot.classList.toggle("active", index === activeIndex));
 
     const layout = () => {
         const cardsVisible = window.innerWidth <= 700 ? 1 : 3;
@@ -34,17 +38,20 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     layout();
-    window.addEventListener("resize", () => { position = 0; layout(); });
-    window.setInterval(() => {
-        position -= step;
+    window.addEventListener("resize", () => { position = 0; activeIndex = 0; layout(); updateDots(); });
+    const slide = (direction = 1, chosenIndex = null) => {
+        window.clearTimeout(resetTimer);
+        activeIndex = chosenIndex === null ? (activeIndex + direction + slideCount) % slideCount : chosenIndex;
+        position = -step * activeIndex;
+        track.style.transition = "transform 650ms cubic-bezier(.22,.61,.36,1)";
         track.style.transform = "translateX(" + position + "px)";
-        if (Math.abs(position) >= step * slideCount) {
-            window.setTimeout(() => {
-                track.style.transition = "none";
-                position = 0;
-                track.style.transform = "translateX(0)";
-                window.requestAnimationFrame(() => { track.style.transition = "transform 650ms cubic-bezier(.22,.61,.36,1)"; });
-            }, 680);
-        }
-    }, 3000);
+        updateDots();
+    };
+    document.querySelector("[data-guide-prev]")?.addEventListener("click", () => slide(-1));
+    document.querySelector("[data-guide-next]")?.addEventListener("click", () => slide(1));
+    dots.forEach((dot, index) => dot.addEventListener("click", () => slide(1, index)));
+    let touchStart = 0;
+    viewport.addEventListener("touchstart", (event) => { touchStart = event.changedTouches[0].clientX; }, {passive: true});
+    viewport.addEventListener("touchend", (event) => { const distance = event.changedTouches[0].clientX - touchStart; if (Math.abs(distance) > 35) slide(distance < 0 ? 1 : -1); }, {passive: true});
+    window.setInterval(() => slide(1), 3000);
 });

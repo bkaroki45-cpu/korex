@@ -25,10 +25,9 @@ def dashboard(request):
     )
     deposit_config = PlatformConfiguration.current()
     guides = [
-        {"theme": "deposit", "icon": "↓", "eyebrow": "01 · FUND YOUR WALLET", "title": "Start with ${:,.0f} USDT".format(deposit_config.minimum_deposit), "steps": ["Send USDT on the correct network", "Submit your amount and TxID", "Admin verifies before wallet credit"]},
-        {"theme": "signals", "icon": "↗", "eyebrow": "02 · COPY SIGNALS", "title": "30 minutes to act", "steps": ["Review the live entry and target", "Choose your locked trade balance", "Copy before the signal window closes"]},
-        {"theme": "rewards", "icon": "✦", "eyebrow": "03 · TRACK REWARDS", "title": "Clear trade outcomes", "steps": ["Each signal shows its stated target", "Settled results appear in activity", "Available rewards move to your wallet"]},
-        {"theme": "referrals", "icon": "◎", "eyebrow": "04 · GROW YOUR NETWORK", "title": "Invite with one link", "steps": ["Share your personal referral link", "Your invitee completes a qualifying deposit", "Follow network activity in Profile"]},
+        {"theme": "trader", "number": "01", "title": "CONNECT & CHOOSE A TRADER", "description": "Start in minutes and follow the best traders.", "steps": ["Create your account", "Browse top performing traders", "Choose who to copy"]},
+        {"theme": "rewards", "number": "02", "title": "TRACK REWARDS & YOUR PROGRESS", "description": "Watch your signals, results and rewards in real time.", "steps": ["Live trade signals", "Real-time performance", "Earn rewards as you grow"]},
+        {"theme": "referrals", "number": "03", "title": "INVITE & GROW YOUR NETWORK", "description": "Share your link and earn together with your team.", "steps": ["Get your referral link", "Invite friends and family", "Earn from their activity"]},
     ]
     return render(request, "dashboard/dashboard.html", {
         "wallet": request.user.wallet,
