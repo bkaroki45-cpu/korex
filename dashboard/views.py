@@ -24,11 +24,6 @@ def dashboard(request):
         defaults={"referral_code": new_referral_code()},
     )
     deposit_config = PlatformConfiguration.current()
-    guides = [
-        {"theme": "trader", "number": "01", "title": "CONNECT & CHOOSE A TRADER", "description": "Start in minutes and follow the best traders.", "steps": ["Create your account", "Browse top performing traders", "Choose who to copy"]},
-        {"theme": "rewards", "number": "02", "title": "TRACK REWARDS & YOUR PROGRESS", "description": "Watch your signals, results and rewards in real time.", "steps": ["Live trade signals", "Real-time performance", "Earn rewards as you grow"]},
-        {"theme": "referrals", "number": "03", "title": "INVITE & GROW YOUR NETWORK", "description": "Share your link and earn together with your team.", "steps": ["Get your referral link", "Invite friends and family", "Earn from their activity"]},
-    ]
     return render(request, "dashboard/dashboard.html", {
         "wallet": request.user.wallet,
         # This is the same wallet field enforced by the withdrawal service.
@@ -41,7 +36,6 @@ def dashboard(request):
         "completed_today": request.user.earning_sessions.filter(session_date=today, status="SETTLED").count(),
         "news": get_market_news() or [],
         "deposit_config": deposit_config,
-        "guides": guides,
         "withdrawal_details_complete": bool(request.user.withdrawal_address and request.user.withdrawal_network),
         "kyc_verified": is_kyc_verified(request.user),
     })

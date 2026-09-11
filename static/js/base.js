@@ -22,11 +22,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const updateDots = () => dots.forEach((dot, index) => dot.classList.toggle("active", index === activeIndex));
 
     const layout = () => {
-        const cardsVisible = window.innerWidth <= 700 ? 1 : 3;
+        const cardsVisible = window.innerWidth <= 700 ? 1 : (window.innerWidth <= 1100 ? 3 : 4);
         const gap = window.innerWidth <= 700 ? 12 : 16;
         const padding = window.innerWidth <= 700 ? 18 : 32;
         const cardWidth = Math.floor((viewport.clientWidth - padding - gap * (cardsVisible - 1)) / cardsVisible);
-        const cardHeight = Math.round(cardWidth * 2 / 3);
+        const cardHeight = Math.round(cardWidth * 721 / 490);
         step = cardWidth + gap;
         track.style.cssText = "display:flex;width:max-content;animation:none;transform:translateX(" + position + "px);transition:transform 650ms cubic-bezier(.22,.61,.36,1)";
         [firstSet, secondSet].forEach((set) => {
