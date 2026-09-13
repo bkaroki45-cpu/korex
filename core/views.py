@@ -14,3 +14,10 @@ def robots_txt(request):
         f"User-agent: *\nAllow: /\nSitemap: {sitemap_url}\n",
         content_type="text/plain",
     )
+
+
+def service_worker(request):
+    response = render(request, "service-worker.js", content_type="application/javascript")
+    response["Service-Worker-Allowed"] = "/"
+    response["Cache-Control"] = "no-cache"
+    return response

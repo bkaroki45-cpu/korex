@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const gap = window.innerWidth <= 700 ? 12 : 16;
         const padding = window.innerWidth <= 700 ? 18 : 32;
         const cardWidth = Math.floor((viewport.clientWidth - padding - gap * (cardsVisible - 1)) / cardsVisible);
-        const cardHeight = Math.round(cardWidth * 721 / 490);
+        const cardHeight = Math.round(cardWidth * 3 / 4);
         step = cardWidth + gap;
         track.style.cssText = "display:flex;width:max-content;animation:none;transform:translateX(" + position + "px);transition:transform 650ms cubic-bezier(.22,.61,.36,1)";
         [firstSet, secondSet].forEach((set) => {
@@ -54,4 +54,40 @@ document.addEventListener("DOMContentLoaded", () => {
     viewport.addEventListener("touchstart", (event) => { touchStart = event.changedTouches[0].clientX; }, {passive: true});
     viewport.addEventListener("touchend", (event) => { const distance = event.changedTouches[0].clientX - touchStart; if (Math.abs(distance) > 35) slide(distance < 0 ? 1 : -1); }, {passive: true});
     window.setInterval(() => slide(1), 3000);
+});
+
+let installPrompt;
+const showInstallPrompt = () => {
+    const prompt = document.querySelector("[data-install-prompt]");
+    if (prompt) prompt.hidden = false;
+};
+window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    installPrompt = event;
+    showInstallPrompt();
+});
+window.addEventListener("appinstalled", () => {
+    installPrompt = undefined;
+    const prompt = document.querySelector("[data-install-prompt]");
+    if (prompt) prompt.hidden = true;
+});
+document.addEventListener("DOMContentLoaded", () => {
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+    const prompt = document.querySelector("[data-install-prompt]");
+    const installButton = document.querySelector("[data-install-app]");
+    const closeButton = document.querySelector("[data-close-install]");
+    if (!prompt || !installButton || !closeButton) return;
+    const isInstalled = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+    if (!isInstalled) window.setTimeout(showInstallPrompt, 900);
+    installButton.addEventListener("click", async () => {
+        if (installPrompt) {
+            installPrompt.prompt();
+            await installPrompt.userChoice;
+            installPrompt = undefined;
+            prompt.hidden = true;
+            return;
+        }
+        prompt.querySelector("[data-install-help]").hidden = false;
+    });
+    closeButton.addEventListener("click", () => { prompt.hidden = true; });
 });

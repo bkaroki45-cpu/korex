@@ -3,7 +3,7 @@ from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 
 from .sitemaps import StaticViewSitemap
-from .views import home, robots_txt
+from .views import home, robots_txt, service_worker
 from accounts import views as account_views
 
 admin.site.site_header = "CLOUDD 1 Administration"
@@ -14,6 +14,7 @@ admin.site.index_title = "Operations dashboard"
 urlpatterns = [
     path("", home, name="home"),
     path("robots.txt", robots_txt, name="robots_txt"),
+    path("service-worker.js", service_worker, name="service_worker"),
     path("sitemap.xml", sitemap, {"sitemaps": {"static": StaticViewSitemap}}, name="sitemap"),
     path("admin/", admin.site.urls),
     path("accounts/", include("accounts.urls")),

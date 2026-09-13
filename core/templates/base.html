@@ -6,6 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}CLOUDD 1{% endblock %}</title>
     <link rel="icon" type="image/png" href="{% static 'images/cloudd1-mark.png' %}">
+    <link rel="manifest" href="{% static 'manifest.webmanifest' %}">
+    <meta name="theme-color" content="#07101c">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="CLOUDD 1">
+    <link rel="apple-touch-icon" href="{% static 'images/pwa-icon-192.png' %}">
     <link rel="stylesheet" href="{% static 'css/base.css' %}">
     <link rel="stylesheet" href="{% static 'css/mobile-nav.css' %}">
     <link rel="stylesheet" href="{% static 'css/logout.css' %}">
@@ -39,6 +45,7 @@
         </main>
     </div>
     <nav class="floating-dock" aria-label="Quick support and community links"><a href="{% url 'support:request' %}" class="dock-web">Website support</a><a href="https://t.me/+254785905899" target="_blank" rel="noopener" class="dock-direct">Direct Telegram</a><a href="https://t.me/cloudddone" target="_blank" rel="noopener" class="dock-join">Join us</a></nav>
+    <aside class="install-prompt" data-install-prompt hidden aria-label="Install CLOUDD 1"><div><strong>Install CLOUDD 1</strong><span>Keep the app on your device for faster access.</span><small data-install-help hidden>Use your browser menu and choose “Install app” or “Add to Home Screen.”</small></div><button type="button" data-install-app>Install</button><button type="button" class="install-close" data-close-install aria-label="Close install prompt">&times;</button></aside>
     <script src="{% static 'js/base.js' %}"></script>
     {% block extra_js %}{% endblock %}
 </body>
