@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const updateDots = () => dots.forEach((dot, index) => dot.classList.toggle("active", index === activeIndex));
 
     const layout = () => {
-        const cardsVisible = window.innerWidth <= 700 ? 1 : 2;
+        const cardsVisible = window.innerWidth <= 700 ? 1 : 3;
         const gap = window.innerWidth <= 700 ? 12 : 16;
         const sidePadding = gap;
         const cardWidth = Math.floor((viewport.clientWidth - sidePadding * 2 - gap * (cardsVisible - 1)) / cardsVisible);
