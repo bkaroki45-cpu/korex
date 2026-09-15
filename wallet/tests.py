@@ -1,6 +1,7 @@
 from decimal import Decimal
 
-from django.test import TestCase
+from django.core import mail
+from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from accounts.models import User
@@ -44,6 +45,7 @@ class CryptoDepositTests(TestCase):
         self.assertEqual(self.alice.wallet.available_balance, Decimal("0.00"))
 
 
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend", DEFAULT_FROM_EMAIL="no-reply@example.com")
 class WithdrawalRequestTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="withdrawer", email="withdrawer@example.com", password="test-password")
@@ -80,13 +82,15 @@ class WithdrawalRequestTests(TestCase):
         withdrawal = WithdrawalRequest.objects.get(user=self.user)
         admin = User.objects.create_superuser(username="admin", email="admin@example.com", password="test-password")
 
-        complete_withdrawal(withdrawal_id=withdrawal.id, admin_user=admin)
+        with self.captureOnCommitCallbacks(execute=True):
+            complete_withdrawal(withdrawal_id=withdrawal.id, admin_user=admin)
 
         withdrawal.refresh_from_db()
         ledger_entry = Transaction.objects.get(reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}")
         self.assertEqual(withdrawal.status, WithdrawalRequest.Status.COMPLETED)
         self.assertEqual(ledger_entry.status, Transaction.Status.COMPLETED)
         self.assertIsNotNone(ledger_entry.completed_at)
+        self.assertTrue(any(email.subject == "Your CLOUDD 1 withdrawal was successful" for email in mail.outbox))
 
     def test_admin_change_page_has_a_complete_button(self):
         self.client.post("/wallet/withdraw/", {

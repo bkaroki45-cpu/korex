@@ -78,6 +78,16 @@ class EmailVerificationTests(TestCase):
         self.assertIn("Your CloudD 1 verification code", mail.outbox[0].subject)
         self.assertIn("expires in 10 minutes", mail.outbox[0].body)
 
+    def test_welcome_email_is_sent_after_successful_signup(self):
+        from django.core import mail
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(reverse("signup"), {
+                "first_name": "New", "last_name": "Member", "email": "new@example.com", "country": "KE",
+                "dial_code": "+254", "phone_local": "712345678", "password1": "VeryStrongPassword123!", "password2": "VeryStrongPassword123!",
+            })
+        self.assertRedirects(response, reverse("email_verification"))
+        self.assertTrue(any(email.subject == "Welcome to CLOUDD 1" for email in mail.outbox))
+
     def test_password_reset_uses_a_separate_code_and_changes_password(self):
         from .email_verification import issue_code
         issue_code(self.user, EmailVerificationCode.Purpose.PASSWORD_RESET)

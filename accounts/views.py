@@ -17,6 +17,7 @@ from .email_verification import (
     TRUSTED_DEVICE_COOKIE, clear_trusted_device_cookie, create_trusted_device,
     issue_code, set_trusted_device_cookie, trusted_device_for_request, verify_code,
 )
+from .notifications import send_welcome_email
 from .forms import EmailAuthenticationForm, EmailVerificationCodeForm, PasswordResetCodeForm, PasswordResetRequestForm, SignUpForm, WithdrawalDetailsForm
 from .kyc import apply_webhook_event, create_didit_session, verification_for, verify_webhook_signature
 from .models import EmailVerificationCode, TrustedDevice
@@ -100,6 +101,7 @@ def signup(request):
                     transaction.set_rollback(True)
                     return render(request, "accounts/signup.html", {"form": form})
         _set_pending_verification(request, user, "dashboard")
+        transaction.on_commit(lambda: send_welcome_email(user))
         try:
             issue_code(user)
         except RuntimeError as error:

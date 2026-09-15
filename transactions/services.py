@@ -54,4 +54,12 @@ def create_manual_locked_deposit(*, user, amount, admin_user, description=""):
         reference_prefix=reference,
         description=f"Referral gift for activated ${amount:.2f} trade balance.",
     )
+    from accounts.notifications import send_deposit_success_email
+    # Admin deposits do not create CryptoDeposit records; use a small compatible payload.
+    class DepositNotification:
+        pass
+    deposit = DepositNotification()
+    deposit.user, deposit.amount, deposit.asset, deposit.network = user, amount, config.deposit_asset, config.deposit_network
+    deposit.transaction_hash, deposit.approved_at, deposit.credited_at, deposit.confirmed_at = None, now, None, None
+    transaction.on_commit(lambda: send_deposit_success_email(deposit, reference=reference))
     return ledger_entry

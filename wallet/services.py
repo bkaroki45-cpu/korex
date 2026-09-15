@@ -6,6 +6,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
+from accounts.notifications import send_deposit_success_email, send_withdrawal_success_email
 from transactions.models import Transaction
 from .models import CryptoDeposit, DepositAddress, OnRampOrder, PlatformConfiguration, Wallet, WithdrawalRequest
 
@@ -96,6 +97,7 @@ def approve_manual_deposit(*, deposit_id, admin_user):
         refresh_referrer_status(deposit.user.received_referral.referrer)
     except Exception:
         pass
+    transaction.on_commit(lambda: send_deposit_success_email(deposit, reference=f"MANUAL-DEPOSIT-{deposit.id}"))
     return investment
 
 
@@ -113,7 +115,8 @@ def complete_withdrawal(*, withdrawal_id, admin_user):
 
     # Retrying a completed request repairs a stale pending ledger entry without
     # counting the same withdrawal in the wallet total a second time.
-    if withdrawal.status == WithdrawalRequest.Status.PENDING:
+    completed_now = withdrawal.status == WithdrawalRequest.Status.PENDING
+    if completed_now:
         wallet = Wallet.objects.select_for_update().get(user=withdrawal.user)
         wallet.total_withdrawn += withdrawal.amount
         wallet.save(update_fields=["total_withdrawn", "updated_at"])
@@ -125,6 +128,8 @@ def complete_withdrawal(*, withdrawal_id, admin_user):
         completed_at=now,
         description="Manually completed withdrawal",
     )
+    if completed_now:
+        transaction.on_commit(lambda: send_withdrawal_success_email(withdrawal))
     return withdrawal
 
 
@@ -143,6 +148,7 @@ def credit_confirmed_deposit(deposit):
     Transaction.objects.create(user=deposit.user, transaction_type=Transaction.TransactionType.DEPOSIT, amount=amount, balance_before=before, balance_after=wallet.available_balance, reference=f"CRYPTO-DEPOSIT-{deposit.id}", description=f"Confirmed {deposit.asset} {deposit.network} deposit", status=Transaction.Status.COMPLETED, completed_at=timezone.now())
     deposit.credited_at = timezone.now()
     deposit.save(update_fields=["credited_at", "updated_at"])
+    transaction.on_commit(lambda: send_deposit_success_email(deposit, reference=f"CRYPTO-DEPOSIT-{deposit.id}"))
     return True
 
 
