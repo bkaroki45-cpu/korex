@@ -37,6 +37,15 @@ class AuthenticationFlowTests(TestCase):
             self.client.post(reverse("logout"))
         self.assertEqual(User.objects.filter(email__in=["ada@example.com", "grace@example.com"]).count(), 2)
 
+    def test_signup_signs_out_an_existing_account_before_new_registration(self):
+        existing = User.objects.create_user(username="existing@example.com", email="existing@example.com", password="VeryStrongPassword123!")
+        self.client.force_login(existing)
+
+        response = self.client.get(reverse("signup"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
     def test_logout_ends_the_authenticated_session(self):
         user = User.objects.create_user(username="member@example.com", email="member@example.com", password="VeryStrongPassword123!")
         self.client.force_login(user)

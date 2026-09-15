@@ -88,7 +88,11 @@ def _complete_email_login(request, user):
 @never_cache
 def signup(request):
     if request.user.is_authenticated:
-        return redirect("dashboard")
+        # Registration must always belong to the email entered in this form.
+        # A browser may still hold another member's session, especially on a
+        # shared phone, so end that session before starting a new signup.
+        logout(request)
+        messages.info(request, "You have been signed out of the previous account. Create your new account below.")
     form = SignUpForm(request.POST or None, initial={"referrer_code": request.GET.get("ref", "")})
     if request.method == "POST" and form.is_valid():
         with transaction.atomic():
