@@ -1,5 +1,7 @@
 from django.http import HttpResponse
+from django.contrib import messages
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 
 
 def home(request):
@@ -21,3 +23,12 @@ def service_worker(request):
     response["Service-Worker-Allowed"] = "/"
     response["Cache-Control"] = "no-cache"
     return response
+
+
+def csrf_failure(request, reason=""):
+    """Refresh an expired form token instead of exposing a raw 403 page."""
+    messages.error(request, "Your security session expired. Please try again using the refreshed form.")
+    referrer = request.META.get("HTTP_REFERER", "")
+    if referrer and url_has_allowed_host_and_scheme(referrer, {request.get_host()}, require_https=request.is_secure()):
+        return redirect(referrer)
+    return redirect("login")
