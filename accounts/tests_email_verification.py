@@ -88,6 +88,10 @@ class EmailVerificationTests(TestCase):
         self.assertRedirects(response, reverse("email_verification"))
         self.assertTrue(any(email.subject == "Welcome to CLOUDD 1" for email in mail.outbox))
 
+    def test_authentication_pages_are_not_cacheable(self):
+        response = self.client.get(reverse("login"))
+        self.assertIn("no-store", response["Cache-Control"])
+
     def test_password_reset_uses_a_separate_code_and_changes_password(self):
         from .email_verification import issue_code
         issue_code(self.user, EmailVerificationCode.Purpose.PASSWORD_RESET)

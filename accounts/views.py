@@ -11,6 +11,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
 from .email_verification import (
@@ -84,6 +85,7 @@ def _complete_email_login(request, user):
     return redirect("trust_device_prompt")
 
 
+@never_cache
 def signup(request):
     if request.user.is_authenticated:
         return redirect("dashboard")
@@ -111,6 +113,7 @@ def signup(request):
     return render(request, "accounts/signup.html", {"form": form})
 
 
+@never_cache
 def login_view(request):
     if request.user.is_authenticated:
         return redirect("dashboard")
@@ -138,6 +141,7 @@ def login_view(request):
     return render(request, "accounts/login.html", {"form": form})
 
 
+@never_cache
 def email_verification(request):
     user = _pending_user(request)
     if not user:
