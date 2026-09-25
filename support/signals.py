@@ -14,6 +14,13 @@ def username(user):
     return user.username or "-"
 
 
+@receiver(post_save, sender=User)
+def alert_new_user(sender, instance, created, **kwargs):
+    if created:
+        transaction.on_commit(lambda: send_alert(
+            f"New website user\nName: {instance.get_full_name() or '-'}\nUsername: @{username(instance)}\nUser ID: {instance.account_id}\nEmail: {instance.email}"
+        ))
+
 @receiver(post_save, sender=CryptoDeposit)
 def alert_deposit(sender, instance, created, **kwargs):
     if created:
