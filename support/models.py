@@ -12,7 +12,8 @@ class SupportRequest(models.Model):
     name = models.CharField(max_length=150)
     email = models.EmailField()
     subject = models.CharField(max_length=180)
-    message = models.TextField()
+    message = models.TextField(max_length=1500)
+    source_ip_hash = models.CharField(max_length=64, blank=True, db_index=True, editable=False)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -21,4 +22,4 @@ class SupportRequest(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"#{self.pk} — {self.subject}"
+        return f"#{self.pk} - {self.subject}"
