@@ -4,6 +4,7 @@ import json
 import os
 from decimal import Decimal, InvalidOperation
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, JsonResponse
@@ -14,8 +15,8 @@ from django.views.decorators.http import require_POST
 
 from .models import CryptoDeposit, MpesaDeposit, PlatformConfiguration, WithdrawalNetwork, WithdrawalRequest, Wallet
 from transactions.models import Transaction
-from .services import CRYPTO_PROVIDER_MODE, get_deposit_address, record_provider_deposit, submit_manual_deposit
-from .mpesa import MpesaError, configured as mpesa_configured, initiate_stk_push, normalize_phone
+from .services import CRYPTO_PROVIDER_MODE, credit_confirmed_mpesa_deposit, get_deposit_address, record_provider_deposit, submit_manual_deposit
+from .mpesa import MpesaError, configured as mpesa_configured, initiate_stk_push, normalize_phone, query_stk_status, quote_usdt_purchase
 from accounts.kyc import is_kyc_verified
 
 
@@ -118,20 +119,14 @@ def crypto_webhook(request):
 @require_POST
 def mpesa_deposit(request):
     try:
-        amount = Decimal(request.POST.get("amount", "")).quantize(Decimal("0.01"))
         phone = normalize_phone(request.POST.get("phone_number", ""))
-        if amount < Decimal("1.00"):
-            raise MpesaError("Minimum M-Pesa sandbox deposit is KES 1.")
-        response = initiate_stk_push(amount, phone, request.user.account_id)
-    except (InvalidOperation, MpesaError) as error:
-        messages.error(request, str(error) or "Enter a valid M-Pesa amount.")
+        usdt_amount, rate, amount_kes = quote_usdt_purchase(request.POST.get("amount_usdt", ""))
+        response = initiate_stk_push(amount_kes, phone, request.user.account_id)
+    except MpesaError as error:
+        messages.error(request, str(error))
     else:
-        deposit = MpesaDeposit.objects.create(
-            user=request.user, amount_kes=amount, phone_number=phone,
-            checkout_request_id=response["CheckoutRequestID"],
-            merchant_request_id=response.get("MerchantRequestID", ""),
-        )
-        messages.success(request, "M-Pesa sandbox prompt sent. Enter your PIN only in the official prompt on your phone.")
+        deposit = MpesaDeposit.objects.create(user=request.user, amount_kes=amount_kes, amount_usdt=usdt_amount, rate_kes_per_usdt=rate, phone_number=phone, checkout_request_id=response["CheckoutRequestID"], merchant_request_id=response.get("MerchantRequestID", ""))
+        messages.success(request, f"M-Pesa prompt sent for KES {amount_kes:,.0f}. Your {usdt_amount:,.2f} USDT quote is locked for this payment.")
         return redirect(f"/wallet/deposit/mpesa/?track={deposit.id}#mpesa-transactions")
     return redirect("wallet:mpesa_deposit")
 
@@ -139,9 +134,7 @@ def mpesa_deposit(request):
 @login_required
 def mpesa_deposit_page(request):
     deposits = MpesaDeposit.objects.filter(user=request.user)[:15]
-    return render(request, "wallet/mpesa_deposit.html", {
-        "configured": mpesa_configured(), "deposits": deposits, "track_id": request.GET.get("track", ""),
-    })
+    return render(request, "wallet/mpesa_deposit.html", {"configured": mpesa_configured(), "deposits": deposits, "track_id": request.GET.get("track", ""), "is_production": settings.MPESA_ENVIRONMENT == "production"})
 
 
 @login_required
@@ -149,11 +142,7 @@ def mpesa_deposit_status(request, deposit_id):
     deposit = MpesaDeposit.objects.filter(pk=deposit_id, user=request.user).first()
     if not deposit:
         return JsonResponse({"detail": "Not found."}, status=404)
-    return JsonResponse({
-        "id": deposit.pk, "status": deposit.status, "status_label": deposit.get_status_display(),
-        "result_description": deposit.result_description,
-        "final": deposit.status in {MpesaDeposit.Status.PAID, MpesaDeposit.Status.FAILED},
-    })
+    return JsonResponse({"id": deposit.pk, "status": deposit.status, "status_label": deposit.get_status_display(), "result_description": deposit.result_description, "final": deposit.status in {MpesaDeposit.Status.PAID, MpesaDeposit.Status.FAILED}})
 
 @csrf_exempt
 @require_POST
@@ -163,16 +152,35 @@ def mpesa_callback(request):
         callback = payload["Body"]["stkCallback"]
         checkout_id = callback["CheckoutRequestID"]
     except (KeyError, TypeError, json.JSONDecodeError):
-        return HttpResponseBadRequest("Malformed M-Pesa callback.")
+        return HttpResponseBadRequest("Malformed payment callback.")
     deposit = MpesaDeposit.objects.filter(checkout_request_id=checkout_id).first()
     if not deposit:
         return JsonResponse({"ResultCode": 0, "ResultDesc": "Accepted"})
     result_code = int(callback.get("ResultCode", 1))
     metadata = {item.get("Name"): item.get("Value") for item in callback.get("CallbackMetadata", {}).get("Item", [])}
+    paid_amount, paid_phone = metadata.get("Amount"), str(metadata.get("PhoneNumber", ""))
+    try:
+        valid_payment = result_code == 0 and paid_phone == deposit.phone_number and Decimal(str(paid_amount)).quantize(Decimal("0.01")) == deposit.amount_kes.quantize(Decimal("0.01"))
+    except (InvalidOperation, TypeError, ValueError):
+        valid_payment = False
+    if valid_payment:
+        try:
+            provider_status = query_stk_status(deposit.checkout_request_id)
+            valid_payment = provider_status.get("ResponseCode") == "0" and int(provider_status.get("ResultCode", 1)) == 0
+        except (MpesaError, TypeError, ValueError):
+            deposit.callback_payload = payload
+            deposit.result_description = "Awaiting secure payment confirmation."
+            deposit.save(update_fields=["callback_payload", "result_description", "updated_at"])
+            return JsonResponse({"ResultCode": 0, "ResultDesc": "Accepted"})
     deposit.result_code = result_code
     deposit.result_description = str(callback.get("ResultDesc", ""))[:255]
     deposit.callback_payload = payload
     deposit.receipt_number = str(metadata.get("MpesaReceiptNumber", ""))[:64]
-    deposit.status = MpesaDeposit.Status.PAID if result_code == 0 else MpesaDeposit.Status.FAILED
-    deposit.save(update_fields=["result_code", "result_description", "callback_payload", "receipt_number", "status", "updated_at"])
+    deposit.paid_amount_kes = paid_amount if valid_payment else None
+    deposit.status = MpesaDeposit.Status.PAID if valid_payment else MpesaDeposit.Status.FAILED
+    if not valid_payment and result_code == 0:
+        deposit.result_description = "Payment details did not match the requested quote."
+    deposit.save(update_fields=["result_code", "result_description", "callback_payload", "receipt_number", "paid_amount_kes", "status", "updated_at"])
+    if valid_payment and settings.MPESA_AUTO_CREDIT_ENABLED:
+        credit_confirmed_mpesa_deposit(deposit.id)
     return JsonResponse({"ResultCode": 0, "ResultDesc": "Accepted"})

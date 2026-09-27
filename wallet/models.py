@@ -164,6 +164,9 @@ class MpesaDeposit(models.Model):
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="mpesa_deposits")
     amount_kes = models.DecimalField(max_digits=12, decimal_places=2)
+    amount_usdt = models.DecimalField(max_digits=20, decimal_places=8, null=True, blank=True)
+    rate_kes_per_usdt = models.DecimalField(max_digits=20, decimal_places=8, null=True, blank=True)
+    paid_amount_kes = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     phone_number = models.CharField(max_length=15)
     checkout_request_id = models.CharField(max_length=128, unique=True)
     merchant_request_id = models.CharField(max_length=128, blank=True)
@@ -174,6 +177,7 @@ class MpesaDeposit(models.Model):
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    credited_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]

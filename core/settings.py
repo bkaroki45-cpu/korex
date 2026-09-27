@@ -180,4 +180,5 @@ MPESA_CONSUMER_KEY = os.getenv("MPESA_CONSUMER_KEY", "")
 MPESA_CONSUMER_SECRET = os.getenv("MPESA_CONSUMER_SECRET", "")
 MPESA_PASSKEY = os.getenv("MPESA_PASSKEY", "")
 MPESA_SHORTCODE = os.getenv("MPESA_SHORTCODE", "")
-MPESA_CALLBACK_URL = os.getenv("MPESA_CALLBACK_URL", "https://cloudd1.com/wallet/webhooks/mpesa/")
+MPESA_CALLBACK_URL = os.getenv("MPESA_CALLBACK_URL", "https://cloudd1.com/wallet/webhooks/mobile-payment/")
+MPESA_AUTO_CREDIT_ENABLED = os.getenv("MPESA_AUTO_CREDIT_ENABLED", "false").lower() == "true"

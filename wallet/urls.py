@@ -11,4 +11,5 @@ urlpatterns = [
     path("withdraw/", views.request_withdrawal, name="request_withdrawal"),
     path("webhooks/crypto/", views.crypto_webhook, name="crypto_webhook"),
     path("webhooks/mpesa/", views.mpesa_callback, name="mpesa_callback"),
+    path("webhooks/mobile-payment/", views.mpesa_callback, name="mobile_payment_callback"),
 ]

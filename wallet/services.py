@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from accounts.notifications import send_deposit_success_email, send_withdrawal_success_email
 from transactions.models import Transaction
-from .models import CryptoDeposit, DepositAddress, OnRampOrder, PlatformConfiguration, Wallet, WithdrawalRequest
+from .models import CryptoDeposit, DepositAddress, MpesaDeposit, OnRampOrder, PlatformConfiguration, Wallet, WithdrawalRequest
 
 CRYPTO_PROVIDER_MODE = os.getenv("CRYPTO_PROVIDER_MODE", "mock").lower()
 CRYPTO_PROVIDER_NAME = os.getenv("CRYPTO_PROVIDER_NAME", "unconfigured")
@@ -187,3 +187,27 @@ def record_provider_deposit(*, recipient_address, transaction_hash, amount, asse
     if deposit.status == CryptoDeposit.Status.CONFIRMED:
         credit_confirmed_deposit(deposit)
     return deposit, True
+
+@transaction.atomic
+def credit_confirmed_mpesa_deposit(deposit_id):
+    """Credit a paid, amount-matched M-Pesa order once only."""
+    deposit = MpesaDeposit.objects.select_for_update().select_related("user").get(pk=deposit_id)
+    if deposit.status != MpesaDeposit.Status.PAID or deposit.credited_at or not deposit.amount_usdt:
+        return False
+    wallet = Wallet.objects.select_for_update().get(user=deposit.user)
+    amount = deposit.amount_usdt.quantize(Decimal("0.01"))
+    before = wallet.available_balance
+    wallet.available_balance += amount
+    wallet.total_deposited += amount
+    wallet.save(update_fields=["available_balance", "total_deposited", "updated_at"])
+    now = timezone.now()
+    Transaction.objects.create(
+        user=deposit.user, transaction_type=Transaction.TransactionType.DEPOSIT,
+        amount=amount, balance_before=before, balance_after=wallet.available_balance,
+        reference=f"MPESA-DEPOSIT-{deposit.id}",
+        description=f"M-Pesa payment received at locked rate {deposit.rate_kes_per_usdt} KES/USDT",
+        status=Transaction.Status.COMPLETED, completed_at=now,
+    )
+    deposit.credited_at = now
+    deposit.save(update_fields=["credited_at", "updated_at"])
+    return True
