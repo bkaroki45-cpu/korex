@@ -173,7 +173,7 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-# Daraja M-Pesa Express. Sandbox only until separately switched to production.
+# M-Pesa Express configuration. The active environment is selected by MPESA_ENVIRONMENT.
 MPESA_ENVIRONMENT = os.getenv("MPESA_ENVIRONMENT", "sandbox")
 MPESA_BASE_URL = "https://sandbox.safaricom.co.ke" if MPESA_ENVIRONMENT == "sandbox" else "https://api.safaricom.co.ke"
 MPESA_CONSUMER_KEY = os.getenv("MPESA_CONSUMER_KEY", "")

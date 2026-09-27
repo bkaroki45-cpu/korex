@@ -61,10 +61,10 @@ def _stk_credentials():
 
 def initiate_stk_push(amount, phone, reference):
     if not configured():
-        raise MpesaError("M-Pesa sandbox is not configured yet.")
+        raise MpesaError("M-Pesa payments are not configured yet.")
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     password = base64.b64encode(f"{settings.MPESA_SHORTCODE}{settings.MPESA_PASSKEY}{timestamp}".encode()).decode()
-    payload = json.dumps({"BusinessShortCode": settings.MPESA_SHORTCODE, "Password": password, "Timestamp": timestamp, "TransactionType": "CustomerPayBillOnline", "Amount": int(amount), "PartyA": phone, "PartyB": settings.MPESA_SHORTCODE, "PhoneNumber": phone, "CallBackURL": settings.MPESA_CALLBACK_URL, "AccountReference": reference, "TransactionDesc": "CLOUDD 1 sandbox deposit"}).encode()
+    payload = json.dumps({"BusinessShortCode": settings.MPESA_SHORTCODE, "Password": password, "Timestamp": timestamp, "TransactionType": "CustomerPayBillOnline", "Amount": int(amount), "PartyA": phone, "PartyB": settings.MPESA_SHORTCODE, "PhoneNumber": phone, "CallBackURL": settings.MPESA_CALLBACK_URL, "AccountReference": reference, "TransactionDesc": "CLOUDD 1 deposit"}).encode()
     response = _request(f"{settings.MPESA_BASE_URL}/mpesa/stkpush/v1/processrequest", payload, {"Authorization": f"Bearer {access_token()}", "Content-Type": "application/json"})
     if response.get("ResponseCode") != "0" or not response.get("CheckoutRequestID"):
         raise MpesaError(response.get("errorMessage") or response.get("ResponseDescription") or "M-Pesa could not start the prompt.")

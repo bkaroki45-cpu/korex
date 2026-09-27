@@ -4,14 +4,14 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="CLOUDD 1 is a signal-led copy-trading platform for following curated crypto trade ideas with clarity.">
+    <meta name="description" content="CLOUDD 1 provides crypto market information, curated copy-signal details, and member activity tracking in one clear workspace.">
     <title>CLOUDD 1 — Copy signals with clarity</title>
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://cloudd1.com/">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="CLOUDD 1">
     <meta property="og:title" content="CLOUDD 1 | Copy signals with clarity">
-    <meta property="og:description" content="Follow curated crypto trade ideas with clarity.">
+    <meta property="og:description" content="Explore crypto market information, curated copy-signal details, and member activity tracking.">
     <meta property="og:url" content="https://cloudd1.com/">
     <meta property="og:image" content="https://cloudd1.com/static/images/cloudd1-logo.png">
     <meta name="twitter:card" content="summary_large_image">
@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="{% static 'core/css/brand-logo.css' %}">
     <link rel="stylesheet" href="{% static 'core/css/home-buttons.css' %}">
     <link rel="stylesheet" href="{% static 'css/floating-dock.css' %}">
-    <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"CLOUDD 1","url":"https://cloudd1.com/","logo":"https://cloudd1.com/static/images/cloudd1-mark.png"}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"Organization","name":"CLOUDD 1","url":"https://cloudd1.com/","logo":"https://cloudd1.com/static/images/cloudd1-mark.png"},{"@type":"WebSite","name":"CLOUDD 1","url":"https://cloudd1.com/","description":"Crypto market information, curated copy-signal details, and member activity tracking."},{"@type":"WebPage","name":"CLOUDD 1 | Copy signals with clarity","url":"https://cloudd1.com/","description":"CLOUDD 1 provides crypto market information, curated copy-signal details, and member activity tracking in one clear workspace."}]}</script>
 </head>
 <body>
     <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
@@ -57,6 +57,10 @@
 
         <section class="features" id="features"><div class="section-heading"><span class="eyebrow">Copy signals. Keep control.</span><h2>Built around the<br>signals you follow.</h2></div><div class="feature-grid"><article><span class="feature-icon">⌁</span><h3>Curated copy signals</h3><p>See the pair, entry, take-profit target, risk level, and timing before choosing whether to follow a signal.</p><a href="{% url 'signup' %}">Explore signals <b>→</b></a></article><article class="featured"><span class="feature-icon">✦</span><h3>Your decision, every time</h3><p>CLOUDD 1 helps you follow trade ideas; you choose each signal and can track whether you took it or missed it.</p><a href="{% url 'signup' %}">How it works <b>→</b></a></article><article><span class="feature-icon">◫</span><h3>Transparent tracking</h3><p>Review your copied-signal history, outcomes, wallet activity, and referral progress from one dashboard.</p><a href="{% url 'signup' %}">Open your dashboard <b>→</b></a></article></div></section>
 
+        <section class="search-overview" aria-labelledby="workspace-overview-title">
+            <div class="search-overview-copy"><span class="eyebrow">ONE MEMBER WORKSPACE</span><h2 id="workspace-overview-title">Market information, signal details, and account activity in one place.</h2><p>CLOUDD 1 brings together crypto market briefings, curated signal details, account activity, and deposit options so members can review information before they decide what to do. Each signal is presented with its market, timing, entry, target, and risk information.</p><p class="search-disclaimer">Digital-asset markets involve risk. Information on CLOUDD 1 is provided for members to review and is not a promise of returns or investment advice.</p></div>
+            <div class="overview-grid"><article><span>01</span><h3>Review market context</h3><p>Read current market information and the key details attached to each available signal.</p></article><article><span>02</span><h3>Choose your next step</h3><p>Consider the signal window, entry, target, and risk information before taking action.</p></article><article><span>03</span><h3>Track account activity</h3><p>Keep deposits, wallet activity, copied signals, and account history together in your dashboard.</p></article></div>
+        </section>
         <section class="steps" id="how-it-works"><div><span class="eyebrow">Copy trading, made clear</span><h2>Ready to follow<br>your next signal?</h2><p>Set up your profile, review the signal details, then decide which ideas fit your own plan. Markets carry risk; outcomes are never guaranteed.</p><a class="button" href="{% url 'signup' %}">Create your account <b>→</b></a></div><ol><li><b>01</b><div><h3>Create your account</h3><p>Join with your email and securely set up your profile.</p></div></li><li><b>02</b><div><h3>Review a copy signal</h3><p>Read the pair, entry, target, and signal window before you participate.</p></div></li><li><b>03</b><div><h3>Track what you follow</h3><p>Keep a clear history of your signal choices and activity in CLOUDD 1.</p></div></li></ol></section>
     </main>
     <footer><a class="home-brand" href="{% url 'home' %}"><img src="{% static 'images/cloudd1-mark.png' %}" alt="CLOUDD 1 logo"> CLOUDD 1</a><p>Signal-led copy trading for a more focused routine.</p><div><a href="{% url 'login' %}">Log in</a><a href="{% url 'signup' %}">Create account</a></div></footer>
