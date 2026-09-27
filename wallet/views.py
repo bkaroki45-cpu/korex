@@ -20,6 +20,11 @@ from accounts.kyc import is_kyc_verified
 
 
 @login_required
+def deposit_options(request):
+    return render(request, "wallet/deposit_options.html")
+
+
+@login_required
 def deposit_crypto(request):
     config = PlatformConfiguration.current()
     address = get_deposit_address(request.user, config.deposit_asset, config.deposit_network)
