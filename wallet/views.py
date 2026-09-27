@@ -18,6 +18,38 @@ from transactions.models import Transaction
 from .services import CRYPTO_PROVIDER_MODE, credit_confirmed_mpesa_deposit, get_deposit_address, record_provider_deposit, submit_manual_deposit
 from .mpesa import MpesaError, configured as mpesa_configured, initiate_stk_push, normalize_phone, query_stk_status, quote_usdt_purchase
 from accounts.kyc import is_kyc_verified
+from support.telegram import send_alert
+
+
+def _masked_phone(phone_number):
+    """Keep admin alerts useful without exposing a member's full phone number."""
+    return f"***{phone_number[-4:]}" if len(phone_number) >= 4 else "Hidden"
+
+
+def _alert_mpesa_prompt(deposit):
+    send_alert(
+        "M-Pesa payment prompt requested\n"
+        f"Amount: KES {deposit.amount_kes:,.0f} for {deposit.amount_usdt:,.2f} USDT\n"
+        f"Rate: {deposit.rate_kes_per_usdt} KES/USDT\n"
+        f"User ID: {deposit.user.account_id}\n"
+        f"Email: {deposit.user.email}\n"
+        f"Phone: {_masked_phone(deposit.phone_number)}\n"
+        f"Reference: MPESA-DEPOSIT-{deposit.id}\n"
+        "Status: Prompt sent — awaiting payment confirmation"
+    )
+
+
+def _alert_mpesa_confirmed(deposit):
+    send_alert(
+        "M-Pesa payment confirmed\n"
+        f"Amount received: KES {deposit.paid_amount_kes:,.2f}\n"
+        f"USDT amount: {deposit.amount_usdt:,.2f} USDT\n"
+        f"User ID: {deposit.user.account_id}\n"
+        f"Email: {deposit.user.email}\n"
+        f"Receipt: {deposit.receipt_number or '-'}\n"
+        f"Reference: MPESA-DEPOSIT-{deposit.id}\n"
+        "Status: Confirmed"
+    )
 
 
 @login_required
@@ -126,6 +158,7 @@ def mpesa_deposit(request):
         messages.error(request, str(error))
     else:
         deposit = MpesaDeposit.objects.create(user=request.user, amount_kes=amount_kes, amount_usdt=usdt_amount, rate_kes_per_usdt=rate, phone_number=phone, checkout_request_id=response["CheckoutRequestID"], merchant_request_id=response.get("MerchantRequestID", ""))
+        transaction.on_commit(lambda: _alert_mpesa_prompt(deposit))
         messages.success(request, f"M-Pesa prompt sent for KES {amount_kes:,.0f}. Your {usdt_amount:,.2f} USDT quote is locked for this payment.")
         return redirect(f"/wallet/deposit/mpesa/?track={deposit.id}#mpesa-transactions")
     return redirect("wallet:mpesa_deposit")
@@ -181,6 +214,8 @@ def mpesa_callback(request):
     if not valid_payment and result_code == 0:
         deposit.result_description = "Payment details did not match the requested quote."
     deposit.save(update_fields=["result_code", "result_description", "callback_payload", "receipt_number", "paid_amount_kes", "status", "updated_at"])
+    if valid_payment:
+        transaction.on_commit(lambda: _alert_mpesa_confirmed(deposit))
     if valid_payment and settings.MPESA_AUTO_CREDIT_ENABLED:
         credit_confirmed_mpesa_deposit(deposit.id)
     return JsonResponse({"ResultCode": 0, "ResultDesc": "Accepted"})

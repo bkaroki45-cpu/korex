@@ -1,12 +1,14 @@
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from accounts.models import User
-from wallet.models import CryptoDeposit, WithdrawalNetwork, WithdrawalRequest
+from wallet.models import CryptoDeposit, MpesaDeposit, WithdrawalNetwork, WithdrawalRequest
 from wallet.services import complete_withdrawal, credit_confirmed_deposit, get_deposit_address, record_provider_deposit
+from wallet.views import _alert_mpesa_confirmed, _alert_mpesa_prompt
 from transactions.models import Transaction
 
 
@@ -43,6 +45,38 @@ class CryptoDepositTests(TestCase):
         self.assertEqual(deposit.status, CryptoDeposit.Status.REJECTED)
         self.alice.wallet.refresh_from_db()
         self.assertEqual(self.alice.wallet.available_balance, Decimal("0.00"))
+
+
+class MpesaTelegramAlertTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="mpesauser", email="mpesa@example.com", password="test-password")
+        self.deposit = MpesaDeposit.objects.create(
+            user=self.user,
+            amount_kes=Decimal("76500.00"),
+            amount_usdt=Decimal("500.00"),
+            rate_kes_per_usdt=Decimal("153.00"),
+            paid_amount_kes=Decimal("76500.00"),
+            phone_number="254708374149",
+            checkout_request_id="checkout-request-1",
+            receipt_number="RKP123456",
+        )
+
+    @patch("wallet.views.send_alert")
+    def test_prompt_alert_contains_relevant_masked_details(self, send_alert):
+        _alert_mpesa_prompt(self.deposit)
+        text = send_alert.call_args.args[0]
+        self.assertIn("M-Pesa payment prompt requested", text)
+        self.assertIn("500.00 USDT", text)
+        self.assertIn("***4149", text)
+        self.assertNotIn(self.deposit.phone_number, text)
+
+    @patch("wallet.views.send_alert")
+    def test_confirmed_alert_contains_receipt_and_reference(self, send_alert):
+        _alert_mpesa_confirmed(self.deposit)
+        text = send_alert.call_args.args[0]
+        self.assertIn("M-Pesa payment confirmed", text)
+        self.assertIn("RKP123456", text)
+        self.assertIn(f"MPESA-DEPOSIT-{self.deposit.id}", text)
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend", DEFAULT_FROM_EMAIL="no-reply@example.com")
