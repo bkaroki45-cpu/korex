@@ -154,3 +154,26 @@ class OnRampOrder(models.Model):
     checkout_url = models.URLField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class MpesaDeposit(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        PAID = "PAID", "Paid"
+        FAILED = "FAILED", "Failed"
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="mpesa_deposits")
+    amount_kes = models.DecimalField(max_digits=12, decimal_places=2)
+    phone_number = models.CharField(max_length=15)
+    checkout_request_id = models.CharField(max_length=128, unique=True)
+    merchant_request_id = models.CharField(max_length=128, blank=True)
+    receipt_number = models.CharField(max_length=64, blank=True)
+    result_code = models.IntegerField(null=True, blank=True)
+    result_description = models.CharField(max_length=255, blank=True)
+    callback_payload = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]

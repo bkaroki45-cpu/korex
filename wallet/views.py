@@ -8,13 +8,14 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.db import transaction
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .models import CryptoDeposit, PlatformConfiguration, WithdrawalNetwork, WithdrawalRequest, Wallet
+from .models import CryptoDeposit, MpesaDeposit, PlatformConfiguration, WithdrawalNetwork, WithdrawalRequest, Wallet
 from transactions.models import Transaction
 from .services import CRYPTO_PROVIDER_MODE, get_deposit_address, record_provider_deposit, submit_manual_deposit
+from .mpesa import MpesaError, configured as mpesa_configured, initiate_stk_push, normalize_phone
 from accounts.kyc import is_kyc_verified
 
 
@@ -107,3 +108,47 @@ def crypto_webhook(request):
     except (KeyError, TypeError, ValueError) as error:
         return HttpResponseBadRequest(str(error))
     return JsonResponse({"deposit_id": deposit.id, "status": deposit.status})
+
+@login_required
+@require_POST
+def mpesa_deposit(request):
+    try:
+        amount = Decimal(request.POST.get("amount", "")).quantize(Decimal("0.01"))
+        phone = normalize_phone(request.POST.get("phone_number", ""))
+        if amount < Decimal("1.00"):
+            raise MpesaError("Minimum M-Pesa sandbox deposit is KES 1.")
+        response = initiate_stk_push(amount, phone, request.user.account_id)
+    except (InvalidOperation, MpesaError) as error:
+        messages.error(request, str(error) or "Enter a valid M-Pesa amount.")
+    else:
+        MpesaDeposit.objects.create(user=request.user, amount_kes=amount, phone_number=phone, checkout_request_id=response["CheckoutRequestID"], merchant_request_id=response.get("MerchantRequestID", ""))
+        messages.success(request, "M-Pesa sandbox prompt sent. Complete it on the Daraja test phone; this will not credit a real wallet.")
+    return redirect("wallet:mpesa_deposit")
+
+
+@login_required
+def mpesa_deposit_page(request):
+    return render(request, "wallet/mpesa_deposit.html", {"configured": mpesa_configured(), "deposits": MpesaDeposit.objects.filter(user=request.user)[:15]})
+
+
+@csrf_exempt
+@require_POST
+def mpesa_callback(request):
+    try:
+        payload = json.loads(request.body)
+        callback = payload["Body"]["stkCallback"]
+        checkout_id = callback["CheckoutRequestID"]
+    except (KeyError, TypeError, json.JSONDecodeError):
+        return HttpResponseBadRequest("Malformed M-Pesa callback.")
+    deposit = MpesaDeposit.objects.filter(checkout_request_id=checkout_id).first()
+    if not deposit:
+        return JsonResponse({"ResultCode": 0, "ResultDesc": "Accepted"})
+    result_code = int(callback.get("ResultCode", 1))
+    metadata = {item.get("Name"): item.get("Value") for item in callback.get("CallbackMetadata", {}).get("Item", [])}
+    deposit.result_code = result_code
+    deposit.result_description = str(callback.get("ResultDesc", ""))[:255]
+    deposit.callback_payload = payload
+    deposit.receipt_number = str(metadata.get("MpesaReceiptNumber", ""))[:64]
+    deposit.status = MpesaDeposit.Status.PAID if result_code == 0 else MpesaDeposit.Status.FAILED
+    deposit.save(update_fields=["result_code", "result_description", "callback_payload", "receipt_number", "status", "updated_at"])
+    return JsonResponse({"ResultCode": 0, "ResultDesc": "Accepted"})
