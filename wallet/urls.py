@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 app_name = "wallet"
 urlpatterns = [
+    path('deposit/', views.deposit_options, name='deposit_options'),
     path("deposit/crypto/", views.deposit_crypto, name="deposit_crypto"),
     path("deposit/crypto/verify/", views.verify_transaction_hash, name="verify_transaction_hash"),
     path("deposit/mpesa/", views.mpesa_deposit_page, name="mpesa_deposit"),
