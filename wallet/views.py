@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseBadRequest, JsonResponse
 from django.db import transaction
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
@@ -126,15 +126,34 @@ def mpesa_deposit(request):
     except (InvalidOperation, MpesaError) as error:
         messages.error(request, str(error) or "Enter a valid M-Pesa amount.")
     else:
-        MpesaDeposit.objects.create(user=request.user, amount_kes=amount, phone_number=phone, checkout_request_id=response["CheckoutRequestID"], merchant_request_id=response.get("MerchantRequestID", ""))
-        messages.success(request, "M-Pesa sandbox prompt sent. Complete it on the Daraja test phone; this will not credit a real wallet.")
+        deposit = MpesaDeposit.objects.create(
+            user=request.user, amount_kes=amount, phone_number=phone,
+            checkout_request_id=response["CheckoutRequestID"],
+            merchant_request_id=response.get("MerchantRequestID", ""),
+        )
+        messages.success(request, "M-Pesa sandbox prompt sent. Enter your PIN only in the official prompt on your phone.")
+        return redirect(f"/wallet/deposit/mpesa/?track={deposit.id}#mpesa-transactions")
     return redirect("wallet:mpesa_deposit")
 
 
 @login_required
 def mpesa_deposit_page(request):
-    return render(request, "wallet/mpesa_deposit.html", {"configured": mpesa_configured(), "deposits": MpesaDeposit.objects.filter(user=request.user)[:15]})
+    deposits = MpesaDeposit.objects.filter(user=request.user)[:15]
+    return render(request, "wallet/mpesa_deposit.html", {
+        "configured": mpesa_configured(), "deposits": deposits, "track_id": request.GET.get("track", ""),
+    })
 
+
+@login_required
+def mpesa_deposit_status(request, deposit_id):
+    deposit = MpesaDeposit.objects.filter(pk=deposit_id, user=request.user).first()
+    if not deposit:
+        return JsonResponse({"detail": "Not found."}, status=404)
+    return JsonResponse({
+        "id": deposit.pk, "status": deposit.status, "status_label": deposit.get_status_display(),
+        "result_description": deposit.result_description,
+        "final": deposit.status in {MpesaDeposit.Status.PAID, MpesaDeposit.Status.FAILED},
+    })
 
 @csrf_exempt
 @require_POST
