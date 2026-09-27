@@ -2,7 +2,7 @@
   position: relative;
   margin: 28px 0 13px;
   padding-left: 13px;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Plus Jakarta Sans", Arial, sans-serif;
   font-size: 22px;
 }
 
@@ -87,7 +87,7 @@
   overflow: hidden;
   margin-top: 6px;
   color: #f4f8ff;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Plus Jakarta Sans", Arial, sans-serif;
   font-size: clamp(14px, 1.8vw, 18px);
   letter-spacing: -.2px;
   text-overflow: ellipsis;
@@ -144,7 +144,7 @@
 
 .market-unavailable h2 {
   margin: 0 0 6px;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Plus Jakarta Sans", Arial, sans-serif;
   font-size: 23px;
 }
 
