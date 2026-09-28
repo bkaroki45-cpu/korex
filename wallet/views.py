@@ -101,6 +101,19 @@ def request_withdrawal(request):
         return redirect("wallet:request_withdrawal")
     address = request.POST.get("withdrawal_address", "").strip()
     network = request.POST.get("withdrawal_network", "").strip()
+    manual_payout_channels = {"MPESA", "EAST_AFRICA"}
+    if network == "MPESA":
+        try:
+            address = f"M-PESA:{normalize_phone(address)}"
+        except MpesaError as error:
+            messages.error(request, str(error))
+            return redirect("wallet:request_withdrawal")
+    elif network == "EAST_AFRICA":
+        mobile_number = "".join(character for character in address if character.isdigit() or character == "+")
+        if len(mobile_number.replace("+", "")) < 8 or len(mobile_number.replace("+", "")) > 15:
+            messages.error(request, "Enter a valid East African mobile-money number.")
+            return redirect("wallet:request_withdrawal")
+        address = f"EAST-AFRICA:{mobile_number}"
     if amount <= 0:
         messages.error(request, "Enter a valid withdrawal amount.")
     elif amount < config.minimum_withdrawal:
@@ -109,7 +122,7 @@ def request_withdrawal(request):
         messages.error(request, "Amount exceeds your withdrawable balance.")
     elif not address or not network:
         messages.error(request, "Enter both a withdrawal address and network.")
-    elif not networks.filter(code=network).exists():
+    elif network not in manual_payout_channels and not networks.filter(code=network).exists():
         messages.error(request, "Choose an available withdrawal network.")
     else:
         with transaction.atomic():

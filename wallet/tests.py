@@ -109,6 +109,25 @@ class WithdrawalRequestTests(TestCase):
         self.assertEqual(self.user.withdrawal_network, "TRC20")
         self.assertEqual(self.user.wallet.available_balance, Decimal("30.00"))
 
+    def test_mpesa_withdrawal_is_sent_for_manual_review(self):
+        response = self.client.post("/wallet/withdraw/", {
+            "amount": "20.00", "withdrawal_network": "MPESA", "withdrawal_address": "0712345678",
+        })
+        self.assertRedirects(response, "/wallet/withdraw/")
+        withdrawal = WithdrawalRequest.objects.get(user=self.user)
+        self.user.wallet.refresh_from_db()
+        self.assertEqual(withdrawal.network, "MPESA")
+        self.assertEqual(withdrawal.address, "M-PESA:254712345678")
+        self.assertEqual(self.user.wallet.available_balance, Decimal("30.00"))
+
+    def test_east_africa_withdrawal_is_sent_for_manual_review(self):
+        response = self.client.post("/wallet/withdraw/", {
+            "amount": "20.00", "withdrawal_network": "EAST_AFRICA", "withdrawal_address": "+255712345678",
+        })
+        self.assertRedirects(response, "/wallet/withdraw/")
+        withdrawal = WithdrawalRequest.objects.get(user=self.user)
+        self.assertEqual(withdrawal.network, "EAST_AFRICA")
+        self.assertEqual(withdrawal.address, "EAST-AFRICA:+255712345678")
     def test_admin_completion_updates_the_user_transaction_status(self):
         self.client.post("/wallet/withdraw/", {
             "amount": "20.00", "withdrawal_network": "TRC20", "withdrawal_address": "TExampleWalletAddress",
