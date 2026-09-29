@@ -9,6 +9,7 @@ from accounts.models import User
 from wallet.models import CryptoDeposit, MpesaDeposit, WithdrawalNetwork, WithdrawalRequest
 from wallet.services import complete_withdrawal, credit_confirmed_deposit, get_deposit_address, record_provider_deposit
 from wallet.views import _alert_mpesa_confirmed, _alert_mpesa_prompt
+from wallet.mpesa import MpesaError, current_usdt_kes_rate
 from transactions.models import Transaction
 
 
@@ -78,6 +79,19 @@ class MpesaTelegramAlertTests(TestCase):
         self.assertIn("RKP123456", text)
         self.assertIn(f"MPESA-DEPOSIT-{self.deposit.id}", text)
 
+
+class MpesaRateTests(TestCase):
+    @patch("wallet.mpesa.cache.get", return_value=None)
+    @patch("wallet.mpesa.cache.set")
+    @patch("wallet.mpesa._request")
+    def test_uses_live_usd_kes_fallback_when_primary_quote_is_unavailable(self, request, cache_set, cache_get):
+        request.side_effect = [MpesaError("primary unavailable"), {"rates": {"KES": 129.55}}]
+
+        rate = current_usdt_kes_rate()
+
+        self.assertEqual(rate, Decimal("129.55"))
+        self.assertEqual(request.call_count, 2)
+        cache_set.assert_called_once_with("mpesa_usdt_kes_rate", "129.55", 30)
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend", DEFAULT_FROM_EMAIL="no-reply@example.com")
 class WithdrawalRequestTests(TestCase):

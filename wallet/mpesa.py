@@ -9,6 +9,7 @@ from django.conf import settings
 from django.core.cache import cache
 
 USDT_KES_URL = "https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=kes"
+USD_KES_FALLBACK_URL = "https://open.er-api.com/v6/latest/USD"
 MINIMUM_MPESA_USDT = Decimal("500")
 
 
@@ -74,11 +75,17 @@ def current_usdt_kes_rate():
     cached = cache.get("mpesa_usdt_kes_rate")
     if cached:
         return Decimal(cached)
-    response = _request(USDT_KES_URL, headers={"Accept": "application/json", "User-Agent": "CLOUDD1-Payments/1.0"})
     try:
+        response = _request(USDT_KES_URL, headers={"Accept": "application/json", "User-Agent": "CLOUDD1-Payments/1.0"})
         rate = Decimal(str(response["tether"]["kes"]))
-    except (KeyError, TypeError, ValueError) as error:
-        raise MpesaError("Current USDT pricing is unavailable. Please try again.") from error
+    except (MpesaError, KeyError, TypeError, ValueError):
+        # USDT is conventionally USD-pegged. Use a separate live USD/KES source only
+        # when the primary USDT quote provider is unavailable.
+        try:
+            response = _request(USD_KES_FALLBACK_URL, headers={"Accept": "application/json", "User-Agent": "CLOUDD1-Payments/1.0"})
+            rate = Decimal(str(response["rates"]["KES"]))
+        except (MpesaError, KeyError, TypeError, ValueError) as error:
+            raise MpesaError("Current USDT pricing is unavailable. Please try again.") from error
     if rate <= 0:
         raise MpesaError("Current USDT pricing is unavailable. Please try again.")
     cache.set("mpesa_usdt_kes_rate", str(rate), 30)
