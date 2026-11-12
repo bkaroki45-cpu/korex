@@ -227,3 +227,21 @@ class WithdrawalRequestTests(TestCase):
         self.assertEqual(withdrawal.status, WithdrawalRequest.Status.REJECTED)
         self.assertEqual(self.user.wallet.available_balance, Decimal("50.00"))
         self.assertEqual(ledger_entry.status, Transaction.Status.REJECTED)
+
+    def test_admin_change_form_rejection_restores_the_full_requested_amount(self):
+        self.client.post("/wallet/withdraw/", {
+            "amount": "40.00", "withdrawal_network": "TRC20", "withdrawal_address": "TExampleWalletAddress",
+        })
+        withdrawal = WithdrawalRequest.objects.get(user=self.user)
+        admin = User.objects.create_superuser(username="admin-reject", email="admin-reject@example.com", password="test-password")
+        self.client.force_login(admin)
+
+        response = self.client.post(reverse("admin:wallet_withdrawalrequest_change", args=[withdrawal.id]), {"status": WithdrawalRequest.Status.REJECTED, "_save": "Save"})
+
+        self.assertEqual(response.status_code, 302)
+        withdrawal.refresh_from_db()
+        self.user.wallet.refresh_from_db()
+        ledger_entry = Transaction.objects.get(reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}")
+        self.assertEqual(withdrawal.status, WithdrawalRequest.Status.REJECTED)
+        self.assertEqual(self.user.wallet.available_balance, Decimal("50.00"))
+        self.assertEqual(ledger_entry.status, Transaction.Status.REJECTED)

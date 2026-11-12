@@ -109,6 +109,18 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
         ]
         return custom_urls + urls
 
+    def save_model(self, request, obj, form, change):
+        # Administrators can also choose "Rejected" on the individual change
+        # page. Route that through the same atomic refund path as the bulk
+        # action so it cannot leave the member's funds reserved.
+        if change:
+            previous = WithdrawalRequest.objects.get(pk=obj.pk)
+            if previous.status == WithdrawalRequest.Status.PENDING and obj.status == WithdrawalRequest.Status.REJECTED:
+                reject_withdrawal(withdrawal_id=obj.pk)
+                obj.refresh_from_db()
+                return
+        super().save_model(request, obj, form, change)
+
     def complete_view(self, request, withdrawal_id):
         withdrawal = get_object_or_404(WithdrawalRequest, pk=withdrawal_id)
         if request.method != "POST":
