@@ -61,7 +61,7 @@ class WithdrawalNetwork(models.Model):
 
 
 class PlatformConfiguration(models.Model):
-    minimum_deposit = models.DecimalField(max_digits=20, decimal_places=2, default=Decimal("500.00"))
+    minimum_deposit = models.DecimalField(max_digits=20, decimal_places=2, default=Decimal("10.00"))
     minimum_withdrawal = models.DecimalField(max_digits=20, decimal_places=2, default=Decimal("10.00"))
     deposit_asset = models.CharField(max_length=12, default="USDT")
     deposit_network = models.CharField(max_length=32, default="TRC20")
@@ -70,6 +70,8 @@ class PlatformConfiguration(models.Model):
     signal_window_minutes = models.PositiveIntegerField(default=30)
     settlement_minutes = models.PositiveIntegerField(default=45)
     team_leader_requirement = models.PositiveIntegerField(default=5)
+    signal_minimum_balance = models.DecimalField(max_digits=20, decimal_places=2, default=Decimal("500.00"))
+    withdrawal_fee_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("10.00"))
 
     @classmethod
     def current(cls):
@@ -128,6 +130,8 @@ class WithdrawalRequest(models.Model):
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="withdrawal_requests")
     amount = models.DecimalField(max_digits=20, decimal_places=2)
+    fee_amount = models.DecimalField(max_digits=20, decimal_places=2, default=Decimal("0.00"))
+    payout_amount = models.DecimalField(max_digits=20, decimal_places=2, default=Decimal("0.00"))
     asset = models.CharField(max_length=12, default="USDT")
     address = models.CharField(max_length=255)
     network = models.CharField(max_length=32)

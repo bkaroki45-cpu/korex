@@ -136,9 +136,11 @@ def request_withdrawal(request):
             request.user.withdrawal_address = address
             request.user.withdrawal_network = network
             request.user.save(update_fields=["withdrawal_address", "withdrawal_network"])
-            withdrawal = WithdrawalRequest.objects.create(user=request.user, amount=amount, address=address, network=network)
+            fee_amount = (amount * config.withdrawal_fee_percent / Decimal("100")).quantize(Decimal("0.01"))
+            payout_amount = amount - fee_amount
+            withdrawal = WithdrawalRequest.objects.create(user=request.user, amount=amount, fee_amount=fee_amount, payout_amount=payout_amount, address=address, network=network)
             Transaction.objects.create(user=request.user, transaction_type=Transaction.TransactionType.WITHDRAWAL, amount=amount, balance_before=before, balance_after=wallet.available_balance, reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}", description="Withdrawal amount reserved for manual processing", status=Transaction.Status.PENDING)
-        messages.success(request, "Withdrawal request submitted. The amount is reserved from your withdrawable balance while it is reviewed.")
+        messages.success(request, f"Withdrawal request submitted. ${fee_amount:.2f} ({config.withdrawal_fee_percent:.0f}%) is deducted as the transaction fee; you will receive ${payout_amount:.2f}.")
     return redirect("wallet:request_withdrawal")
 
 

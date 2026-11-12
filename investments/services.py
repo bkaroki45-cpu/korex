@@ -4,6 +4,7 @@ from random import SystemRandom
 from zoneinfo import ZoneInfo
 
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 
 from transactions.models import Transaction
@@ -142,6 +143,13 @@ def participate_in_signal(*, user, investment_id, signal_id):
         raise ValueError("Identity verification required. Complete KYC before participating in signals.")
     now = timezone.now()
     config = PlatformConfiguration.current()
+    # Active trade balances count toward the member's account balance. Using the
+    # larger value also supports legacy accounts whose locked wallet balance was
+    # not backfilled when their investment was created.
+    invested_balance = Investment.objects.filter(user=user, status=Investment.Status.ACTIVE).aggregate(total=Sum("principal"))["total"] or Decimal("0.00")
+    account_balance = max(user.wallet.total_balance, invested_balance)
+    if account_balance < config.signal_minimum_balance:
+        raise ValueError(f"A balance of at least ${config.signal_minimum_balance:.2f} is required to receive signals.")
     investment = Investment.objects.select_for_update().get(id=investment_id, user=user)
     signal = Signal.objects.select_for_update().get(id=signal_id)
     if investment.status != Investment.Status.ACTIVE or not investment.end_date or investment.end_date <= now:

@@ -76,13 +76,13 @@ class WithdrawalNetworkAdmin(admin.ModelAdmin):
 
 @admin.register(PlatformConfiguration)
 class PlatformConfigurationAdmin(admin.ModelAdmin):
-    list_display = ("deposit_asset", "deposit_network", "minimum_deposit", "minimum_withdrawal", "principal_lock_days", "signal_window_minutes", "settlement_minutes", "team_leader_requirement")
+    list_display = ("deposit_asset", "deposit_network", "minimum_deposit", "minimum_withdrawal", "signal_minimum_balance", "withdrawal_fee_percent", "principal_lock_days", "signal_window_minutes", "settlement_minutes", "team_leader_requirement")
 
 @admin.register(WithdrawalRequest)
 class WithdrawalRequestAdmin(admin.ModelAdmin):
     change_form_template = "admin/wallet/withdrawalrequest/change_form.html"
-    list_display = ("user", "account_id", "amount", "asset", "network", "status", "created_at", "completed_at", "complete_link")
-    readonly_fields = ("user", "amount", "asset", "address", "network", "completed_by", "completed_at", "created_at")
+    list_display = ("user", "account_id", "amount", "fee_amount", "payout_amount", "asset", "network", "status", "created_at", "completed_at", "complete_link")
+    readonly_fields = ("user", "amount", "fee_amount", "payout_amount", "asset", "address", "network", "completed_by", "completed_at", "created_at")
     actions = ("mark_completed", "reject_requests")
     list_filter = ("status", "asset", "network", "created_at")
     search_fields = ("user__email", "user__account_id", "address")

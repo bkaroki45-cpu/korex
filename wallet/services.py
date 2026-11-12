@@ -12,7 +12,7 @@ from .models import CryptoDeposit, DepositAddress, MpesaDeposit, OnRampOrder, Pl
 
 CRYPTO_PROVIDER_MODE = os.getenv("CRYPTO_PROVIDER_MODE", "mock").lower()
 CRYPTO_PROVIDER_NAME = os.getenv("CRYPTO_PROVIDER_NAME", "unconfigured")
-MINIMUM_USDT_DEPOSIT = Decimal(os.getenv("MINIMUM_USDT_DEPOSIT", "500"))
+MINIMUM_USDT_DEPOSIT = Decimal(os.getenv("MINIMUM_USDT_DEPOSIT", "10"))
 
 
 class MockCustodyProvider:
@@ -137,7 +137,8 @@ def complete_withdrawal(*, withdrawal_id, admin_user):
 def credit_confirmed_deposit(deposit):
     """Provider webhook adapters call this only after network/token/address confirmation."""
     deposit = CryptoDeposit.objects.select_for_update().select_related("user").get(pk=deposit.pk)
-    if deposit.status != CryptoDeposit.Status.CONFIRMED or deposit.credited_at or not deposit.amount or deposit.amount < MINIMUM_USDT_DEPOSIT:
+    config = PlatformConfiguration.current()
+    if deposit.status != CryptoDeposit.Status.CONFIRMED or deposit.credited_at or not deposit.amount or deposit.amount < config.minimum_deposit:
         return False
     wallet = Wallet.objects.select_for_update().get(user=deposit.user)
     amount = deposit.amount.quantize(Decimal("0.01"))
@@ -179,7 +180,7 @@ def record_provider_deposit(*, recipient_address, transaction_hash, amount, asse
     )
     if not created:
         return deposit, False
-    if amount < MINIMUM_USDT_DEPOSIT:
+    if amount < PlatformConfiguration.current().minimum_deposit:
         deposit.status, deposit.verification_note = CryptoDeposit.Status.REJECTED, "Deposit is below the minimum amount."
     elif status == CryptoDeposit.Status.CONFIRMED:
         deposit.confirmed_at = timezone.now()

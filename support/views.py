@@ -1,12 +1,13 @@
 from datetime import timedelta
 
 from django.contrib import messages
-from django.shortcuts import redirect, render
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
-from .forms import SupportRequestForm
-from .models import SupportRequest
+from .forms import SupportReplyForm, SupportRequestForm
+from .models import SupportMessage, SupportRequest
 from .security import client_fingerprint
 
 RATE_WINDOW = timedelta(minutes=15)
@@ -35,4 +36,22 @@ def support_request(request):
             item.save()
             messages.success(request, "Your support message has been sent. Our team will respond as soon as possible.")
             return redirect("support:request")
-    return render(request, "support/request.html", {"form": form})
+    tickets = SupportRequest.objects.filter(user=request.user) if request.user.is_authenticated else SupportRequest.objects.none()
+    return render(request, "support/portal.html", {"form": form, "requests": tickets})
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def support_chat(request, request_id):
+    item = get_object_or_404(SupportRequest, pk=request_id, user=request.user)
+    SupportMessage.objects.filter(request=item, is_staff_reply=True, read_at__isnull=True).update(read_at=timezone.now())
+    form = SupportReplyForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        reply = form.save(commit=False)
+        reply.request, reply.sender, reply.is_staff_reply = item, request.user, False
+        reply.save()
+        if item.status == SupportRequest.Status.RESOLVED:
+            item.status = SupportRequest.Status.OPEN
+            item.save(update_fields=["status", "updated_at"])
+        return redirect("support:chat", request_id=item.id)
+    return render(request, "support/chat.html", {"ticket": item, "form": form})

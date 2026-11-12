@@ -23,3 +23,20 @@ class SupportRequest(models.Model):
 
     def __str__(self):
         return f"#{self.pk} - {self.subject}"
+
+
+class SupportMessage(models.Model):
+    """A message in a support conversation. Staff messages create user alerts."""
+
+    request = models.ForeignKey(SupportRequest, on_delete=models.CASCADE, related_name="replies")
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="support_messages")
+    body = models.TextField(max_length=1500)
+    is_staff_reply = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Reply to #{self.request_id}"

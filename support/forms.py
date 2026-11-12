@@ -36,3 +36,20 @@ class SupportRequestForm(forms.ModelForm):
 
     def clean_message(self):
         return self._clean_text_field("message", 8)
+
+
+class SupportReplyForm(forms.ModelForm):
+    class Meta:
+        from .models import SupportMessage
+        model = SupportMessage
+        fields = ("body",)
+        widgets = {"body": forms.Textarea(attrs={"rows": 3, "maxlength": 1500, "placeholder": "Write your reply..."})}
+
+    def clean_body(self):
+        try:
+            value = clean_support_text(self.cleaned_data.get("body", ""))
+        except ValueError as error:
+            raise forms.ValidationError(str(error)) from error
+        if not value:
+            raise forms.ValidationError("Write a message before sending.")
+        return value

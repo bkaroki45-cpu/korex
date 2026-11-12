@@ -7,7 +7,7 @@
   <div class="withdraw-grid">
     <form method="post" class="withdraw-form">{% csrf_token %}
       <h2>Request withdrawal</h2>
-      <p class="withdraw-hint">Minimum request: <b>{{ config.minimum_withdrawal|floatformat:2 }} USDT</b></p>
+      <p class="withdraw-hint">Minimum request: <b>{{ config.minimum_withdrawal|floatformat:2 }} USDT</b>. A {{ config.withdrawal_fee_percent|floatformat:0 }}% transaction fee is deducted, so you receive 90% of the amount requested.</p>
       <label for="withdraw-amount">Amount (USDT)</label>
       <input id="withdraw-amount" name="amount" type="number" min="{{ config.minimum_withdrawal }}" max="{{ wallet.available_balance }}" step="0.01" placeholder="0.00" required>
       <label for="withdrawal-network">Network</label>
@@ -22,7 +22,7 @@
     </form>
     <aside class="withdraw-alert"><b>!</b><h2>Confirm before submitting</h2><p>Crypto transfers cannot be reversed. Check your address and network carefully before requesting a withdrawal.</p><ul><li>Amount cannot be more than your withdrawable balance</li><li>Use the correct network for the receiving wallet</li><li>Requests are reviewed before funds are sent</li></ul></aside>
   </div>
-  {% if requests %}<section class="withdraw-history"><h2>Withdrawal activity</h2>{% for item in requests %}<article><div><strong>{{ item.amount|floatformat:2 }} USDT</strong><small>{{ item.created_at|date:"M d, Y · g:i A" }}</small></div><span class="{{ item.status|lower }}">{{ item.get_status_display }}</span></article>{% endfor %}</section>{% endif %}
+  {% if requests %}<section class="withdraw-history"><h2>Withdrawal activity</h2>{% for item in requests %}<article><div><strong>Requested {{ item.amount|floatformat:2 }} USDT · Receive {{ item.payout_amount|floatformat:2 }} USDT</strong><small>Fee: {{ item.fee_amount|floatformat:2 }} USDT · {{ item.created_at|date:"M d, Y · g:i A" }}</small></div><span class="{{ item.status|lower }}">{{ item.get_status_display }}</span></article>{% endfor %}</section>{% endif %}
 </section>
 {% endblock %}
 {% block extra_js %}
