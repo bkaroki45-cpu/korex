@@ -6,7 +6,7 @@ from django.urls import path, reverse
 from django.utils.html import format_html
 
 from .models import CryptoDeposit, DepositAddress, OnRampOrder, PlatformConfiguration, Wallet, WithdrawalNetwork, WithdrawalRequest
-from .services import approve_manual_deposit, complete_withdrawal
+from .services import approve_manual_deposit, complete_withdrawal, reject_withdrawal
 
 
 @admin.register(DepositAddress)
@@ -127,13 +127,5 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
             except ValueError: pass
     @admin.action(description="Reject selected pending withdrawals")
     def reject_requests(self, request, queryset):
-        from django.db import transaction
         for withdrawal in queryset.filter(status=WithdrawalRequest.Status.PENDING):
-            with transaction.atomic():
-                wallet = Wallet.objects.select_for_update().get(user=withdrawal.user)
-                wallet.available_balance += withdrawal.amount
-                wallet.save(update_fields=["available_balance", "updated_at"])
-                withdrawal.status = WithdrawalRequest.Status.REJECTED
-                withdrawal.save(update_fields=["status"])
-                from transactions.models import Transaction
-                Transaction.objects.filter(reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}").update(status=Transaction.Status.CANCELLED, description="Withdrawal request rejected; amount restored to wallet")
+            reject_withdrawal(withdrawal_id=withdrawal.id)

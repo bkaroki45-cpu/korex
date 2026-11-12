@@ -134,6 +134,29 @@ def complete_withdrawal(*, withdrawal_id, admin_user):
 
 
 @transaction.atomic
+def reject_withdrawal(*, withdrawal_id):
+    """Reject a pending request and return its full reserved amount once only."""
+    withdrawal = WithdrawalRequest.objects.select_for_update().select_related("user").get(pk=withdrawal_id)
+    if withdrawal.status == WithdrawalRequest.Status.COMPLETED:
+        raise ValueError("A completed withdrawal cannot be rejected.")
+    if withdrawal.status == WithdrawalRequest.Status.REJECTED:
+        return withdrawal
+
+    wallet = Wallet.objects.select_for_update().get(user=withdrawal.user)
+    # `amount` is the gross amount reserved from the wallet. The transaction
+    # fee is never charged when the administrator rejects the request.
+    wallet.available_balance += withdrawal.amount
+    wallet.save(update_fields=["available_balance", "updated_at"])
+    withdrawal.status = WithdrawalRequest.Status.REJECTED
+    withdrawal.save(update_fields=["status"])
+    Transaction.objects.filter(reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}").update(
+        status=Transaction.Status.CANCELLED,
+        description="Withdrawal request rejected; full reserved amount restored to wallet",
+    )
+    return withdrawal
+
+
+@transaction.atomic
 def credit_confirmed_deposit(deposit):
     """Provider webhook adapters call this only after network/token/address confirmation."""
     deposit = CryptoDeposit.objects.select_for_update().select_related("user").get(pk=deposit.pk)

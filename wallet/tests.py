@@ -7,7 +7,7 @@ from django.urls import reverse
 
 from accounts.models import User
 from wallet.models import CryptoDeposit, MpesaDeposit, WithdrawalNetwork, WithdrawalRequest
-from wallet.services import complete_withdrawal, credit_confirmed_deposit, get_deposit_address, record_provider_deposit
+from wallet.services import complete_withdrawal, credit_confirmed_deposit, get_deposit_address, record_provider_deposit, reject_withdrawal
 from wallet.views import _alert_mpesa_confirmed, _alert_mpesa_prompt
 from wallet.mpesa import MpesaError, current_usdt_kes_rate
 from transactions.models import Transaction
@@ -210,3 +210,20 @@ class WithdrawalRequestTests(TestCase):
 
         ledger_entry.refresh_from_db()
         self.assertEqual(ledger_entry.status, Transaction.Status.COMPLETED)
+
+    def test_rejected_withdrawal_restores_the_full_requested_amount(self):
+        self.client.post("/wallet/withdraw/", {
+            "amount": "40.00", "withdrawal_network": "TRC20", "withdrawal_address": "TExampleWalletAddress",
+        })
+        withdrawal = WithdrawalRequest.objects.get(user=self.user)
+        self.user.wallet.refresh_from_db()
+        self.assertEqual(self.user.wallet.available_balance, Decimal("10.00"))
+
+        reject_withdrawal(withdrawal_id=withdrawal.id)
+
+        withdrawal.refresh_from_db()
+        self.user.wallet.refresh_from_db()
+        ledger_entry = Transaction.objects.get(reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}")
+        self.assertEqual(withdrawal.status, WithdrawalRequest.Status.REJECTED)
+        self.assertEqual(self.user.wallet.available_balance, Decimal("50.00"))
+        self.assertEqual(ledger_entry.status, Transaction.Status.CANCELLED)
