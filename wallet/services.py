@@ -150,7 +150,7 @@ def reject_withdrawal(*, withdrawal_id):
     withdrawal.status = WithdrawalRequest.Status.REJECTED
     withdrawal.save(update_fields=["status"])
     Transaction.objects.filter(reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}").update(
-        status=Transaction.Status.CANCELLED,
+        status=Transaction.Status.REJECTED,
         description="Withdrawal request rejected; full reserved amount restored to wallet",
     )
     return withdrawal

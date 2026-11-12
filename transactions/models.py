@@ -22,6 +22,7 @@ class Transaction(models.Model):
         COMPLETED = "COMPLETED", "Completed"
         FAILED = "FAILED", "Failed"
         CANCELLED = "CANCELLED", "Cancelled"
+        REJECTED = "REJECTED", "Rejected"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

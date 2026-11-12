@@ -226,4 +226,4 @@ class WithdrawalRequestTests(TestCase):
         ledger_entry = Transaction.objects.get(reference=f"WITHDRAWAL-REQUEST-{withdrawal.id}")
         self.assertEqual(withdrawal.status, WithdrawalRequest.Status.REJECTED)
         self.assertEqual(self.user.wallet.available_balance, Decimal("50.00"))
-        self.assertEqual(ledger_entry.status, Transaction.Status.CANCELLED)
+        self.assertEqual(ledger_entry.status, Transaction.Status.REJECTED)
