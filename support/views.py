@@ -54,4 +54,4 @@ def support_chat(request, request_id):
             item.status = SupportRequest.Status.OPEN
             item.save(update_fields=["status", "updated_at"])
         return redirect("support:chat", request_id=item.id)
-    return render(request, "support/chat.html", {"ticket": item, "form": form})
+    return render(request, "support/chat_modern.html", {"ticket": item, "form": form})

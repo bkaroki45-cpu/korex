@@ -24,7 +24,7 @@ class AuthenticationFlowTests(TestCase):
     def test_user_can_log_in_with_email_and_password(self):
         User.objects.create_user(username="ada@gmail.com", email="ada@gmail.com", password="VeryStrongPassword123!")
         response = self.client.post(reverse("login"), {"username": "ada@gmail.com", "password": "VeryStrongPassword123!"})
-        self.assertRedirects(response, reverse("email_verification"))
+        self.assertRedirects(response, reverse("dashboard"))
 
     def test_multiple_people_can_register_with_different_email_addresses(self):
         for first_name, email in (("Ada", "ada@example.com"), ("Grace", "grace@example.com")):

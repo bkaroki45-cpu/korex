@@ -130,16 +130,10 @@ def login_view(request):
         if request.method == "POST" and form.is_valid():
             user = form.get_user()
             clear_failures(request, "password", email)
-            if trusted_device_for_request(user, request):
-                login(request, user)
-                return redirect(_safe_next(request, request.POST.get("next")))
-            _set_pending_verification(request, user, _safe_next(request, request.POST.get("next")))
-            try:
-                issue_code(user)
-            except RuntimeError as error:
-                form.add_error(None, str(error))
-                return render(request, "accounts/login.html", {"form": form})
-            return redirect("email_verification")
+            # Sign-in uses email and password only. Verification codes remain
+            # exclusively for confirming a forgot-password reset.
+            login(request, user)
+            return redirect(_safe_next(request, request.POST.get("next")))
         if request.method == "POST":
             register_failure(request, "password", email)
     return render(request, "accounts/login.html", {"form": form})
