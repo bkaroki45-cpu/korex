@@ -7,8 +7,9 @@ from django.utils import timezone
 
 from accounts.models import KYCVerification, User
 from investments.models import EarningSession, Investment, Signal, SignalParticipation
-from investments.services import eligible_signals_for_user, kenya_today, mark_missed_signals, participate_in_signal, settle_due_trades
+from investments.services import eligible_signals_for_user, kenya_today, mark_missed_signals, mature_due_investments, participate_in_signal, settle_due_trades
 from memberships.models import Membership
+from transactions.models import Transaction
 
 
 class DailySignalProfitTests(TestCase):
@@ -64,5 +65,20 @@ class DailySignalProfitTests(TestCase):
         self.assertEqual(response.context["signal_window_seconds"], 30 * 60)
         self.assertContains(response, "data-server-now-epoch-ms=")
         self.assertContains(response, "data-signal-start-epoch-seconds=")
+
+    def test_matured_principal_is_recorded_as_an_investment_return(self):
+        self.investment.end_date = timezone.now() - timedelta(seconds=1)
+        self.investment.save(update_fields=["end_date"])
+        self.user.wallet.locked_balance = self.investment.principal
+        self.user.wallet.save(update_fields=["locked_balance"])
+
+        self.assertEqual(mature_due_investments(), 1)
+
+        ledger_entry = Transaction.objects.get(reference=f"INVESTMENT-MATURED-{self.investment.id}")
+        self.user.wallet.refresh_from_db()
+        self.assertEqual(ledger_entry.transaction_type, Transaction.TransactionType.INVESTMENT)
+        self.assertEqual(ledger_entry.amount, self.investment.principal)
+        self.assertEqual(ledger_entry.balance_after, self.investment.principal)
+        self.assertIn("principal returned", ledger_entry.description)
 
 # Create your tests here.

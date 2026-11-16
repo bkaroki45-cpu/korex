@@ -25,6 +25,7 @@ urlpatterns = [
     path("markets/", include("markets.urls")),
     path("referrals/", include("referrals.urls")),
     path("wallet/", include("wallet.urls")),
+    path("transactions/", include("transactions.urls")),
     path("support/", include("support.urls")),
 
     path("dashboard/", include("dashboard.urls")),

@@ -8,9 +8,10 @@ from urllib.request import Request, urlopen
 from django.conf import settings
 from django.core.cache import cache
 
+from .models import PlatformConfiguration
+
 USDT_KES_URL = "https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=kes"
 USD_KES_FALLBACK_URL = "https://open.er-api.com/v6/latest/USD"
-MINIMUM_MPESA_USDT = Decimal("500")
 
 
 class MpesaError(ValueError):
@@ -97,8 +98,9 @@ def quote_usdt_purchase(value):
         usdt_amount = Decimal(str(value)).quantize(Decimal("0.00000001"))
     except Exception as error:
         raise MpesaError("Enter a valid USDT amount.") from error
-    if usdt_amount < MINIMUM_MPESA_USDT:
-        raise MpesaError("Minimum M-Pesa deposit is 500 USDT.")
+    minimum_deposit = PlatformConfiguration.current().minimum_deposit
+    if usdt_amount < minimum_deposit:
+        raise MpesaError(f"Minimum deposit is ${minimum_deposit:.2f} USDT.")
     rate = current_usdt_kes_rate()
     amount_kes = (usdt_amount * rate).quantize(Decimal("1"), rounding=ROUND_UP)
     return usdt_amount, rate, amount_kes

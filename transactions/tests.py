@@ -4,8 +4,54 @@ from django.test import TestCase
 
 from accounts.models import User
 from referrals.services import create_referral
+from django.urls import reverse
 from .models import Transaction
 from .services import create_manual_locked_deposit
+
+
+class TransactionHistoryTests(TestCase):
+    def test_history_shows_all_transaction_types_only_for_the_signed_in_user(self):
+        user = User.objects.create_user(username="history-user", email="history@example.com", password="test-password")
+        other_user = User.objects.create_user(username="other-user", email="other@example.com", password="test-password")
+        for index, transaction_type in enumerate((
+            Transaction.TransactionType.DEPOSIT,
+            Transaction.TransactionType.WITHDRAWAL,
+            Transaction.TransactionType.REFUND,
+        )):
+            Transaction.objects.create(
+                user=user,
+                transaction_type=transaction_type,
+                amount=Decimal("10.00"),
+                reference=f"HISTORY-{index}",
+                status=Transaction.Status.COMPLETED,
+            )
+        Transaction.objects.create(
+            user=other_user,
+            transaction_type=Transaction.TransactionType.DEPOSIT,
+            amount=Decimal("20.00"),
+            reference="OTHER-USER",
+        )
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("transactions:history"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["page_obj"].paginator.count, 3)
+        for reference in ("HISTORY-0", "HISTORY-1", "HISTORY-2"):
+            self.assertContains(response, reference)
+        self.assertNotContains(response, "OTHER-USER")
+
+    def test_history_can_filter_by_transaction_type(self):
+        user = User.objects.create_user(username="filter-user", email="filter@example.com", password="test-password")
+        Transaction.objects.create(user=user, transaction_type=Transaction.TransactionType.DEPOSIT, amount=Decimal("10.00"), reference="FILTER-DEPOSIT")
+        Transaction.objects.create(user=user, transaction_type=Transaction.TransactionType.WITHDRAWAL, amount=Decimal("12.00"), reference="FILTER-WITHDRAWAL")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("transactions:history"), {"type": Transaction.TransactionType.WITHDRAWAL})
+
+        self.assertEqual(response.context["page_obj"].paginator.count, 1)
+        self.assertContains(response, "FILTER-WITHDRAWAL")
+        self.assertNotContains(response, "FILTER-DEPOSIT")
 
 
 class ManualDepositTests(TestCase):

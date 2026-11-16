@@ -6,10 +6,10 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from accounts.models import User
-from wallet.models import CryptoDeposit, MpesaDeposit, WithdrawalNetwork, WithdrawalRequest
+from wallet.models import CryptoDeposit, MpesaDeposit, PlatformConfiguration, WithdrawalNetwork, WithdrawalRequest
 from wallet.services import complete_withdrawal, credit_confirmed_deposit, get_deposit_address, record_provider_deposit, reject_withdrawal
 from wallet.views import _alert_mpesa_confirmed, _alert_mpesa_prompt
-from wallet.mpesa import MpesaError, current_usdt_kes_rate
+from wallet.mpesa import MpesaError, current_usdt_kes_rate, quote_usdt_purchase
 from transactions.models import Transaction
 
 
@@ -92,6 +92,28 @@ class MpesaRateTests(TestCase):
         self.assertEqual(rate, Decimal("129.55"))
         self.assertEqual(request.call_count, 2)
         cache_set.assert_called_once_with("mpesa_usdt_kes_rate", "129.55", 30)
+
+
+class DepositMinimumTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="minimum-user", email="minimum@example.com", password="test-password")
+        self.client.force_login(self.user)
+
+    @override_settings(MPESA_CONSUMER_KEY="consumer", MPESA_CONSUMER_SECRET="secret", MPESA_PASSKEY="passkey", MPESA_SHORTCODE="123456")
+    def test_minimum_is_shown_on_deposit_pages_and_mpesa_accepts_ten_usdt(self):
+        for url in (reverse("wallet:deposit_options"), reverse("wallet:deposit_crypto"), reverse("wallet:mpesa_deposit")):
+            response = self.client.get(url)
+            self.assertContains(response, "$10.00")
+        response = self.client.get(reverse("wallet:mpesa_deposit"))
+        self.assertContains(response, 'min="10.00"')
+
+    @patch("wallet.mpesa.current_usdt_kes_rate", return_value=Decimal("130.00"))
+    def test_mpesa_uses_configured_minimum_on_server(self, current_rate):
+        amount, rate, kes_amount = quote_usdt_purchase("10.00")
+        self.assertEqual((amount, rate, kes_amount), (Decimal("10.00000000"), Decimal("130.00"), Decimal("1300")))
+        with self.assertRaisesMessage(MpesaError, "Minimum deposit is $10.00 USDT."):
+            quote_usdt_purchase("9.99")
+
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend", DEFAULT_FROM_EMAIL="no-reply@example.com")
 class WithdrawalRequestTests(TestCase):

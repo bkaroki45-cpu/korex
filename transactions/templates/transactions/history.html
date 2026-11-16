@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Transactions | CLOUDD 1{% endblock %}
+{% block page_title %}Transactions{% endblock %}
+{% block content %}
+<section class="transactions-page">
+    <header class="transactions-heading">
+        <div><span>ACCOUNT ACTIVITY</span><h1>Transactions</h1><p>Deposits, withdrawals, returns, profits, rewards, and other wallet activity.</p></div>
+        <a href="{% url 'dashboard' %}">Back to dashboard</a>
+    </header>
+    <form class="transaction-filter" method="get">
+        <label for="transaction-type">Transaction type</label>
+        <select id="transaction-type" name="type">
+            <option value="">All transaction types</option>
+            {% for value, label in transaction_types %}
+            <option value="{{ value }}"{% if selected_type == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Filter</button>
+        {% if selected_type %}<a href="{% url 'transactions:history' %}">Clear filter</a>{% endif %}
+    </form>
+    <div class="transaction-table-wrap">
+        <table class="transaction-table">
+            <thead><tr><th>Transaction</th><th>Reference / details</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody>
+                {% for item in page_obj %}
+                <tr>
+                    <td><strong>{{ item.get_transaction_type_display }}</strong></td>
+                    <td><span>{{ item.reference }}</span>{% if item.description %}<small>{{ item.description }}</small>{% endif %}</td>
+                    <td>${{ item.amount|floatformat:2 }} USDT</td>
+                    <td><span class="transaction-status {{ item.status|lower }}">{{ item.get_status_display }}</span></td>
+                    <td>{{ item.created_at|date:"M d, Y · g:i A" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td class="transaction-empty" colspan="5">No transactions found{% if selected_type %} for this type{% endif %}.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="transaction-pagination" aria-label="Transaction pages">
+        {% if page_obj.has_previous %}<a href="?{% if selected_type %}type={{ selected_type }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a>{% endif %}
+        <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}<a href="?{% if selected_type %}type={{ selected_type }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+    </nav>
+    {% endif %}
+</section>
+<style>
+.transactions-page{max-width:1180px;margin:0 auto;padding:24px 0 48px;color:#eef6ff}.transactions-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:24px}.transactions-heading span{color:#74edbf;font-size:11px;font-weight:900;letter-spacing:1.5px}.transactions-heading h1{margin:7px 0;font-size:clamp(30px,5vw,42px)}.transactions-heading p{margin:0;color:#aabbd0}.transactions-heading>a,.transaction-filter button,.transaction-pagination a{padding:10px 15px;border:1px solid #365674;border-radius:10px;color:#d9e8f8;text-decoration:none;font-weight:800}.transaction-filter{display:flex;align-items:center;gap:10px;margin-bottom:14px}.transaction-filter label{font-size:13px;font-weight:800}.transaction-filter select{min-width:190px;padding:10px;border:1px solid #365674;border-radius:9px;background:#0b1828;color:#eef6ff}.transaction-filter button{background:#183c38;cursor:pointer}.transaction-filter>a{color:#9ed8c8;font-size:13px}.transaction-table-wrap{overflow-x:auto;border:1px solid #29445d;border-radius:14px;background:#0b1828}.transaction-table{width:100%;border-collapse:collapse;text-align:left}.transaction-table th,.transaction-table td{padding:15px 16px;border-bottom:1px solid #1f354a;vertical-align:top}.transaction-table th{color:#9cb4ca;font-size:11px;text-transform:uppercase;letter-spacing:.7px}.transaction-table td{font-size:13px}.transaction-table td strong{color:#f3f8ff}.transaction-table td small{display:block;max-width:380px;margin-top:5px;color:#96abc0;line-height:1.45}.transaction-table td:nth-child(2)>span{color:#b4c6d9;overflow-wrap:anywhere}.transaction-status{display:inline-block;padding:5px 9px;border-radius:99px;background:#263b50;color:#c9d8e8;font-size:11px;font-weight:800}.transaction-status.completed{background:#1c62453d;color:#81f1b3}.transaction-status.pending{background:#715a203d;color:#ffdc7b}.transaction-status.failed,.transaction-status.rejected,.transaction-status.cancelled{background:#872f343d;color:#ff99a1}.transaction-empty{text-align:center!important;padding:38px!important;color:#9eb0c4}.transaction-pagination{display:flex;justify-content:center;align-items:center;gap:16px;margin-top:18px;color:#aabbd0;font-size:13px}.transaction-pagination a{padding:8px 12px}@media(max-width:700px){.transactions-heading{align-items:flex-start;flex-direction:column}.transaction-filter{align-items:flex-start;flex-wrap:wrap}.transaction-table{min-width:760px}}
+</style>
+{% endblock %}

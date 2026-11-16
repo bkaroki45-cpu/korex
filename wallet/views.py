@@ -54,7 +54,7 @@ def _alert_mpesa_confirmed(deposit):
 
 @login_required
 def deposit_options(request):
-    return render(request, "wallet/deposit_options.html")
+    return render(request, "wallet/deposit_options.html", {"minimum_deposit": PlatformConfiguration.current().minimum_deposit})
 
 
 @login_required
@@ -182,7 +182,7 @@ def mpesa_deposit(request):
 @login_required
 def mpesa_deposit_page(request):
     deposits = MpesaDeposit.objects.filter(user=request.user)[:15]
-    return render(request, "wallet/mpesa_deposit.html", {"configured": mpesa_configured(), "deposits": deposits, "track_id": request.GET.get("track", ""), "is_production": settings.MPESA_ENVIRONMENT == "production"})
+    return render(request, "wallet/mpesa_deposit.html", {"configured": mpesa_configured(), "deposits": deposits, "minimum_deposit": PlatformConfiguration.current().minimum_deposit, "track_id": request.GET.get("track", ""), "is_production": settings.MPESA_ENVIRONMENT == "production"})
 
 
 @login_required

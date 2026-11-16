@@ -127,11 +127,23 @@ def mature_due_investments():
     matured = 0
     for investment in Investment.objects.select_for_update().filter(status=Investment.Status.ACTIVE, end_date__lte=now):
         wallet = Wallet.objects.select_for_update().get(user=investment.user)
+        before = wallet.available_balance
         wallet.available_balance += investment.principal
         wallet.locked_balance -= investment.principal
         wallet.save(update_fields=["available_balance", "locked_balance", "updated_at"])
         investment.status = Investment.Status.COMPLETED
         investment.save(update_fields=["status", "updated_at"])
+        Transaction.objects.create(
+            user=investment.user,
+            transaction_type=Transaction.TransactionType.INVESTMENT,
+            amount=investment.principal,
+            balance_before=before,
+            balance_after=wallet.available_balance,
+            reference=f"INVESTMENT-MATURED-{investment.id}",
+            description="Matured investment principal returned to available balance",
+            status=Transaction.Status.COMPLETED,
+            completed_at=now,
+        )
         matured += 1
     return matured
 
