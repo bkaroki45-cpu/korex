@@ -115,6 +115,19 @@ class DepositMinimumTests(TestCase):
             quote_usdt_purchase("9.99")
 
 
+class LogoutNavigationTests(TestCase):
+    def test_authenticated_layout_renders_desktop_and_mobile_logout_controls(self):
+        user = User.objects.create_user(username="logout-user", email="logout@example.com", password="test-password")
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("wallet:deposit_options"))
+
+        self.assertContains(response, 'class="desktop-logout-form"')
+        self.assertContains(response, 'class="mobile-logout-form"')
+        self.assertContains(response, 'css/mobile-nav.css?v=20261117')
+        self.assertContains(response, 'css/logout.css?v=20261117')
+
+
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend", DEFAULT_FROM_EMAIL="no-reply@example.com")
 class WithdrawalRequestTests(TestCase):
     def setUp(self):
